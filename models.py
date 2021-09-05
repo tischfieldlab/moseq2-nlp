@@ -1,4 +1,5 @@
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+import pdb
 import numpy as np
 
 class DocumentEmbedding(object):
@@ -23,8 +24,7 @@ class DocumentEmbedding(object):
             return np.array([self.model.infer_vector(sent) for sent in sentences])
         elif self.dm == 2:
             E0 = [self.model0.infer_vector(sent) for sent in sentences]
-            E1 = [self.model0.infer_vector(sent) for sent in sentences]
-
+            E1 = [self.model1.infer_vector(sent) for sent in sentences]
             return np.array([.5 * (em0 + em1) for (em0, em1) in zip(E0, E1)])
         else:
             raise ValueError('Distributed memory value not valid. Accepted values are dm=0,1,2.')

@@ -39,6 +39,7 @@ embedding_dim      = int(config_dict['embedding_dim'])
 embedding_window   = int(config_dict['embedding_window'])
 embedding_epochs   = int(config_dict['embedding_epochs'])
 bad_syllables      = config_dict['bad_syllables'].split(',')
+bad_syllables      = [int(bs) for bs in bad_syllables]
 scoring            = config_dict['scoring']
 K                  = int(config_dict['K'])
 penalty            = config_dict['penalty']
@@ -62,7 +63,7 @@ labels, usages, transitions, sentences, bigram_sentences = load_data(data_dir,
 print('Getting features')
 num_animals = len(labels) 
 if representation == 'embeddings':
-    model  = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, min_count=min_count)
+    model  = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count)
     rep = np.array(model.fit_predict(sentences))
 elif representation == 'usages':
     rep = usages
@@ -78,7 +79,7 @@ kf = KFold(n_splits=int(num_animals / float(K)))
 if penalty is not 'none':
     clf = LogisticRegressionCV(Cs=Cs, cv=kf, scoring=scoring,random_state=args.seed, dual=False, solver='lbfgs', penalty=penalty,class_weight='balanced',multi_class='auto', tol=1e-6, max_iter=2000).fit(rep,labels)
 else:
-    clf = LogisticRegressionCV(cv=kf, scoring=scoring,random_state=args.seed, dual=False, solver='lbfgs', class_weight='balanced', multi_class='auto', tol=1e-5, max_iter=2000).fit(rep,labels)
+    clf = LogisticRegressionCV(cv=kf, scoring=scoring,random_state=args.seed, dual=False, solver='lbfgs', class_weight='balanced', multi_class='auto', tol=1e-6, max_iter=2000).fit(rep,labels)
 scores = np.array([sc for sc in clf.scores_.values()]) # nm_classes x num_folds x num_C
 best_score = np.max(scores.mean((0,1)))
 best_C     = Cs[np.argmax(scores.mean((0,1)))]
