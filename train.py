@@ -1,4 +1,7 @@
-from configparser import ConfigParser
+import time
+times = {'Preamble' : 0.0, 'Data' : 0.0, 'Features' :0.0, 'Classifier' : 0.0}
+start = time.time()
+import configargparse
 import argparse
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LogisticRegressionCV
@@ -7,88 +10,92 @@ from utils import load_data
 from tqdm import tqdm
 import json
 import numpy as np
+import time
 import os
 import pdb
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--name', type=str, default='DEFAULT')
+parser = configargparse.ArgParser(default_config_files=['./config.cfg'])
+
 parser.add_argument('--seed', type=int, default=0)
+parser.add_argument('--name', type=str)
+parser.add_argument('--data_dir', type=str)
+parser.add_argument('--save_dir', type=str)
+parser.add_argument('--experiment',type=str)
+parser.add_argument('--timepoint',type=int)
+parser.add_argument('--representation', type=str)
+parser.add_argument('--emissions', action='store_true')
+parser.add_argument('--custom_labels',action='append')
+parser.add_argument('--custom_label_names',action='append')
+parser.add_argument('--num_syllables',type=int)
+parser.add_argument('--num_transitions',type=int)
+parser.add_argument('--min_count',type=int)
+parser.add_argument('--dm',type=int)
+parser.add_argument('--embedding_dim',type=int)
+parser.add_argument('--embedding_window',type=int)
+parser.add_argument('--embedding_epochs',type=int)
+parser.add_argument('--bad_syllables',action='append')
+parser.add_argument('--scoring',type=str)
+parser.add_argument('--K',type=int)
+parser.add_argument('--penalty',type=str)
+parser.add_argument('--num_C',type=int)
 args = parser.parse_args()
 
-# Load experimental parameters
-config = ConfigParser(allow_no_value=True)
-config.optionxform = str
-config.read('config.cfg')
-config_dict = {}
-for (key, val) in config.items(args.name):
-    config_dict[key] = val
-
-data_dir           = config_dict['data_dir']
-save_dir           = config_dict['save_dir']
-experiment         = config_dict['experiment']
-timepoint          = int(config_dict['timepoint'])
-representation     = config_dict['representation']
-emissions          = config.getboolean(args.name, 'emissions')
-custom_labels      = config_dict['custom_labels'].split(',')
-custom_label_names = config_dict['custom_label_names'].split(',')
-max_syllable       = int(config_dict['max_syllable'])
-num_transitions    = int(config_dict['num_transitions'])
-min_count          = int(config_dict['min_count'])
-dm                 = int(config_dict['dm'])
-embedding_dim      = int(config_dict['embedding_dim'])
-embedding_window   = int(config_dict['embedding_window'])
-embedding_epochs   = int(config_dict['embedding_epochs'])
-bad_syllables      = config_dict['bad_syllables'].split(',')
-bad_syllables      = [int(bs) for bs in bad_syllables]
-scoring            = config_dict['scoring']
-K                  = int(config_dict['K'])
-penalty            = config_dict['penalty']
-num_C              = int(config_dict['num_C'])
-
-exp_dir = os.path.join(save_dir, args.name)
+exp_name = args.experiment if args.name is None else args.experiment + args.name
+exp_dir = os.path.join(args.save_dir,exp_name)
 if not os.path.exists(exp_dir):
     os.makedirs(exp_dir)
-   
-print('Getting data') 
-labels, usages, transitions, sentences, bigram_sentences = load_data(data_dir,
-                                                       experiment, 
-                                                       emissions=emissions,
-                                                       custom_labels=custom_labels,
-                                                       custom_label_names=custom_label_names,
-                                                       max_syllable=max_syllable,
-                                                       num_transitions=num_transitions,
-                                                       bad_syllables=bad_syllables,
-                                                       timepoint=timepoint)
 
+times['Preamble'] = time.time() - start
+
+start = time.time()
+print('Getting data') 
+labels, usages, transitions, sentences, bigram_sentences = load_data(args.data_dir,
+                                                       args.experiment, 
+                                                       emissions=args.emissions,
+                                                       custom_labels=args.custom_labels,
+                                                       custom_label_names=args.custom_label_names,
+                                                       num_syllables=args.num_syllables,
+                                                       num_transitions=args.num_transitions,
+                                                       bad_syllables=args.bad_syllables,
+                                                       timepoint=args.timepoint)
+
+times['Data'] = time.time() - start
+
+start = time.time()
 print('Getting features')
 num_animals = len(labels) 
-if representation == 'embeddings':
-    model  = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count)
+if args.representation == 'embeddings':
+    model  = DocumentEmbedding(dm=args.dm, embedding_dim=args.embedding_dim, embedding_window=args.embedding_window, embedding_epochs=args.embedding_epochs, min_count=args.min_count)
     rep = np.array(model.fit_predict(sentences))
-elif representation == 'usages':
+elif args.representation == 'usages':
     rep = usages
-elif representation == 'transitions':
+elif args.representation == 'transitions':
     rep = transitions
 else:
     raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
+times['Features'] = time.time() - start
 
+start = time.time()
 print('Training classifier')
-Cs = np.logspace(-5,5,num_C)
-kf = KFold(n_splits=int(num_animals / float(K)))
+Cs = np.logspace(-5,5,args.num_C)
+kf = KFold(n_splits=int(num_animals / float(args.K)))
 # Load and train classifier
-if penalty is not 'none':
-    clf = LogisticRegressionCV(Cs=Cs, cv=kf, scoring=scoring,random_state=args.seed, dual=False, solver='lbfgs', penalty=penalty,class_weight='balanced',multi_class='auto', tol=1e-6, max_iter=2000).fit(rep,labels)
+if args.penalty is not 'none':
+    clf = LogisticRegressionCV(Cs=Cs, cv=kf, scoring=args.scoring,random_state=args.seed, dual=False, solver='lbfgs', penalty=args.penalty,class_weight='balanced',multi_class='auto', tol=1e-6, max_iter=2000).fit(rep,labels)
 else:
-    clf = LogisticRegressionCV(cv=kf, scoring=scoring,random_state=args.seed, dual=False, solver='lbfgs', class_weight='balanced', multi_class='auto', tol=1e-6, max_iter=2000).fit(rep,labels)
+    clf = LogisticRegressionCV(cv=kf, scoring=args.scoring,random_state=args.seed, dual=False, solver='lbfgs', class_weight='balanced', multi_class='auto', tol=1e-6, max_iter=2000).fit(rep,labels)
 scores = np.array([sc for sc in clf.scores_.values()]) # nm_classes x num_folds x num_C
 best_score = np.max(scores.mean((0,1)))
 best_C     = Cs[np.argmax(scores.mean((0,1)))]
+times['Classifier'] = time.time() - start
 
-print('Best {}: {}'.format(scoring, best_score))
+print('Best {}: {}'.format(args.scoring, best_score))
 print('Best C: {}'.format(best_C))
 
+save_dict = args.__dict__
+save_dict['compute_times']=times
 fn = os.path.join(exp_dir, 'exp_params.txt')
 with open(fn, 'w') as file:
-    file.write(json.dumps(config_dict))
-np.save(os.path.join(exp_dir, '{}.npy'.format(scoring)), best_score)
+    file.write(json.dumps(save_dict))
+np.save(os.path.join(exp_dir, '{}.npy'.format(args.scoring)), best_score)
 np.save(os.path.join(exp_dir, 'best_C.npy'), best_C)

@@ -13,7 +13,7 @@ from moseq2_viz.model.util import (get_transition_matrix,
                                    results_to_dataframe,
                                    relabel_by_usage, get_syllable_statistics)
 def set_data(super_dir, experiment, **kwargs):
-    max_syllable = kwargs['max_syllable']
+    num_syllables = kwargs['num_syllables']
     num_transitions=kwargs['num_transitions']
 
     if experiment == '2021-02-19_Meloxicam':
@@ -85,7 +85,7 @@ def set_data(super_dir, experiment, **kwargs):
 
 def load_data(super_dir, experiment, **kwargs):
     emissions = kwargs['emissions']
-    max_syllable = kwargs['max_syllable']
+    num_syllables = kwargs['num_syllables']
     num_transitions=kwargs['num_transitions']
     bad_syllables=kwargs['bad_syllables']
     custom_labels = kwargs['custom_labels']
@@ -122,12 +122,12 @@ def load_data(super_dir, experiment, **kwargs):
         group_labels.append(custom_labels[groups.index(g)])
     
         # Get transitions
-        tm = get_transition_matrix([l], combine=True, max_syllable=max_syllable - 1)
+        tm = get_transition_matrix([l], combine=True, max_syllable=num_syllables - 1)
         tm_vals.append(tm.ravel())
     
         # Get usages
         u, _ = get_syllable_statistics(l, count='usage')
-        u_vals = list(u.values())[:max_syllable]
+        u_vals = list(u.values())[:num_syllables]
         total_u = np.sum(u_vals)
         usage_vals.append(np.array(u_vals) / total_u)
     
@@ -169,3 +169,4 @@ def load_data(super_dir, experiment, **kwargs):
     group_sizes = [sum(np_g == g) for g in np.unique(np_g)]
     lb_ind = np.argsort(np_g)
     return group_labels, usage_vals, truncated_tm_vals, sentences, bigram_sentences
+
