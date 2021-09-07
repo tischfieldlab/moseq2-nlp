@@ -7,7 +7,7 @@ setup(
     version='0.1.0',
     packages=find_packages(),
     #platforms=['mac', 'unix'],
-    install_requires=[],
+    install_requires=['numpy==1.19.2', 'tqdm==4.36.1', 'gensim==4.0.1','ConfigArgParse==1.5.2','scikit_learn==0.24.2'],
     python_requires='>=3.6',
     #entry_points={'console_scripts': ['moseq2-viz = moseq2_viz.cli:cli']}
 )
