@@ -86,7 +86,6 @@ def load_data(model_file, index_file, **kwargs):
         frames_vals.append(np.array(list(f.values())) / total_f)
     
         # Get emissions
-        pdb.set_trace()
         l = list(filter(lambda a: a not in bad_syllables, l))
         np_l = np.array(l)
         if emissions:
