@@ -16,7 +16,7 @@ setup(
         'ConfigArgParse==1.5.2',
         'scikit_learn==0.24.2'
         'h5py',
-        'moseq2-viz @ git+https://github.com/tischfieldlab/moseq2-viz.git@master'
+        'moseq2-viz' # @ git+https://github.com/tischfieldlab/moseq2-viz.git@master'
     ],
     #entry_points={'console_scripts': ['moseq2-viz = moseq2_viz.cli:cli']}
 )
