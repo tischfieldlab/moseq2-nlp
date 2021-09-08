@@ -81,7 +81,7 @@ print('Training classifier')
 Cs = np.logspace(-5,5,args.num_C)
 kf = KFold(n_splits=int(num_animals / float(args.K)))
 # Load and train classifier
-if args.penalty is not 'none':
+if args.penalty != 'none':
     clf = LogisticRegressionCV(Cs=Cs, cv=kf, scoring=args.scoring,random_state=args.seed, dual=False, solver='lbfgs', penalty=args.penalty,class_weight='balanced',multi_class='auto', tol=1e-6, max_iter=2000).fit(rep,labels)
 else:
     clf = LogisticRegressionCV(cv=kf, scoring=args.scoring,random_state=args.seed, dual=False, solver='lbfgs', class_weight='balanced', multi_class='auto', tol=1e-6, max_iter=2000).fit(rep,labels)
