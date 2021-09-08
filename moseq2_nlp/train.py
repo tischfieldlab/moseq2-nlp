@@ -43,6 +43,7 @@ if args.custom_groupings is not None:
     custom_groupings = [s.split(',') for s in args.custom_groupings]
 else:
     custom_groupings = []
+bad_syllables = [int(bs) for bs in args.bad_syllables]
 exp_dir = os.path.join(args.save_dir,args.name)
 if not os.path.exists(exp_dir):
     os.makedirs(exp_dir)
@@ -57,7 +58,7 @@ labels, usages, transitions, sentences, bigram_sentences = load_data(args.model_
                                                        custom_groupings=custom_groupings,
                                                        num_syllables=args.num_syllables,
                                                        num_transitions=args.num_transitions,
-                                                       bad_syllables=args.bad_syllables,
+                                                       bad_syllables=bad_syllables,
                                                        timepoint=args.timepoint)
 
 times['Data'] = time.time() - start
@@ -68,6 +69,7 @@ num_animals = len(labels)
 if args.representation == 'embeddings':
     model  = DocumentEmbedding(dm=args.dm, embedding_dim=args.embedding_dim, embedding_window=args.embedding_window, embedding_epochs=args.embedding_epochs, min_count=args.min_count)
     rep = np.array(model.fit_predict(sentences))
+    model.save(os.path.join(exp_dir, 'doc2vec'))
 elif args.representation == 'usages':
     rep = usages
 elif args.representation == 'transitions':
