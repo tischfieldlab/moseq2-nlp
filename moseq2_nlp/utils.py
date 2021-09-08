@@ -2,8 +2,6 @@ import os
 import numpy as np
 from gensim.models import Phrases
 import sys
-moseq_path = '/media/data_cifs/matt/moseq2-viz'
-sys.path.append(moseq_path)
 from tqdm import tqdm
 import pdb
 import moseq2_viz
