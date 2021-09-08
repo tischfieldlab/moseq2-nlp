@@ -7,7 +7,7 @@ import ast
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LogisticRegressionCV
 from  models import DocumentEmbedding
-from utils import load_data
+from moseq2_nlp.utils import load_data
 from tqdm import tqdm
 import json
 import numpy as np
