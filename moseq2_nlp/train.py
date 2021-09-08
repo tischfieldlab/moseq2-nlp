@@ -3,6 +3,7 @@ times = {'Preamble' : 0.0, 'Data' : 0.0, 'Features' :0.0, 'Classifier' : 0.0}
 start = time.time()
 import configargparse
 import argparse
+import ast
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LogisticRegressionCV
 from  models import DocumentEmbedding
@@ -18,14 +19,13 @@ parser = configargparse.ArgParser(default_config_files=['./config.cfg'])
 
 parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--name', type=str)
-parser.add_argument('--data_dir', type=str)
 parser.add_argument('--save_dir', type=str)
-parser.add_argument('--experiment',type=str)
+parser.add_argument('--model_path', type=str)
+parser.add_argument('--index_path', type=str)
 parser.add_argument('--timepoint',type=int)
 parser.add_argument('--representation', type=str)
 parser.add_argument('--emissions', action='store_true')
-parser.add_argument('--custom_labels',action='append')
-parser.add_argument('--custom_label_names',action='append')
+parser.add_argument('--custom_groupings',action='append', nargs='?')
 parser.add_argument('--num_syllables',type=int)
 parser.add_argument('--num_transitions',type=int)
 parser.add_argument('--min_count',type=int)
@@ -39,9 +39,11 @@ parser.add_argument('--K',type=int)
 parser.add_argument('--penalty',type=str)
 parser.add_argument('--num_C',type=int)
 args = parser.parse_args()
-
-exp_name = args.experiment if args.name is None else args.experiment + args.name
-exp_dir = os.path.join(args.save_dir,exp_name)
+if args.custom_groupings is not None:
+    custom_groupings = [s.split(',') for s in args.custom_groupings]
+else:
+    custom_groupings = []
+exp_dir = os.path.join(args.save_dir,args.name)
 if not os.path.exists(exp_dir):
     os.makedirs(exp_dir)
 
@@ -49,11 +51,10 @@ times['Preamble'] = time.time() - start
 
 start = time.time()
 print('Getting data') 
-labels, usages, transitions, sentences, bigram_sentences = load_data(args.data_dir,
-                                                       args.experiment, 
+labels, usages, transitions, sentences, bigram_sentences = load_data(args.model_path,
+                                                       args.index_path,
                                                        emissions=args.emissions,
-                                                       custom_labels=args.custom_labels,
-                                                       custom_label_names=args.custom_label_names,
+                                                       custom_groupings=custom_groupings,
                                                        num_syllables=args.num_syllables,
                                                        num_transitions=args.num_transitions,
                                                        bad_syllables=args.bad_syllables,
