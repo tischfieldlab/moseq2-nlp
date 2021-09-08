@@ -14,7 +14,7 @@ setup(
         'gensim==4.0.1',
         'python-Levenshtein',
         'ConfigArgParse==1.5.2',
-        'scikit_learn==0.24.2'
+        'scikit_learn==0.24.2',
         'h5py',
         'moseq2-viz' # @ git+https://github.com/tischfieldlab/moseq2-viz.git@master'
     ],
