@@ -2,8 +2,7 @@ import time
 times = {'Preamble' : 0.0, 'Data' : 0.0, 'Features' :0.0, 'Classifier' : 0.0}
 start = time.time()
 import configargparse
-import argparse
-import ast
+from distutils.util import strtobool
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LogisticRegressionCV
 from  models import DocumentEmbedding
@@ -13,7 +12,6 @@ import json
 import numpy as np
 import time
 import os
-import pdb
 
 parser = configargparse.ArgParser(default_config_files=['./config.cfg'])
 
@@ -22,9 +20,8 @@ parser.add_argument('--name', type=str)
 parser.add_argument('--save_dir', type=str)
 parser.add_argument('--model_path', type=str)
 parser.add_argument('--index_path', type=str)
-parser.add_argument('--timepoint',type=int)
 parser.add_argument('--representation', type=str)
-parser.add_argument('--emissions',type=bool)
+parser.add_argument('--emissions',type= lambda x:bool(strtobool(x)))
 parser.add_argument('--custom_groupings',action='append', nargs='?')
 parser.add_argument('--num_syllables',type=int)
 parser.add_argument('--num_transitions',type=int)
@@ -43,11 +40,13 @@ if args.custom_groupings is not None:
     custom_groupings = [s.split(',') for s in args.custom_groupings]
 else:
     custom_groupings = []
-bad_syllables = [int(bs) for bs in args.bad_syllables]
+if args.bad_syllables is not None:
+    bad_syllables = [int(bs) for bs in args.bad_syllables]
+else:
+    bad_syllables = []
 exp_dir = os.path.join(args.save_dir,args.name)
 if not os.path.exists(exp_dir):
     os.makedirs(exp_dir)
-
 times['Preamble'] = time.time() - start
 
 start = time.time()
@@ -58,8 +57,7 @@ labels, usages, transitions, sentences, bigram_sentences = load_data(args.model_
                                                        custom_groupings=custom_groupings,
                                                        num_syllables=args.num_syllables,
                                                        num_transitions=args.num_transitions,
-                                                       bad_syllables=bad_syllables,
-                                                       timepoint=args.timepoint)
+                                                       bad_syllables=bad_syllables)
 
 times['Data'] = time.time() - start
 
@@ -69,7 +67,7 @@ num_animals = len(labels)
 if args.representation == 'embeddings':
     model  = DocumentEmbedding(dm=args.dm, embedding_dim=args.embedding_dim, embedding_window=args.embedding_window, embedding_epochs=args.embedding_epochs, min_count=args.min_count)
     rep = np.array(model.fit_predict(sentences))
-    model.save(os.path.join(exp_dir, 'doc2vec'))
+    #model.save(os.path.join(exp_dir, 'doc2vec'))
 elif args.representation == 'usages':
     rep = usages
 elif args.representation == 'transitions':

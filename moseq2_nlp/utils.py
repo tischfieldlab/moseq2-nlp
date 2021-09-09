@@ -3,7 +3,6 @@ import numpy as np
 from gensim.models import Phrases
 import sys
 from tqdm import tqdm
-import pdb
 import moseq2_viz
 from moseq2_viz.util import parse_index
 from moseq2_viz.model.util import (get_transition_matrix,

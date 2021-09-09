@@ -1,5 +1,4 @@
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-import pdb
 import numpy as np
 
 class DocumentEmbedding(object):
@@ -15,7 +14,7 @@ class DocumentEmbedding(object):
         if self.dm < 2 and self.dm >=0:
             self.model = Doc2Vec(documents, dm=self.dm, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1)
         elif self.dm == 2:
-            self.model0 = Doc2Vec(documents, dm=0, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1, dbow_words=1)
+            self.model0 = Doc2Vec(documents, dm=0, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1, dbow_words=0)
             self.model1 = Doc2Vec(documents, dm=1, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1)
         else:
             raise ValueError('Distributed memory value not valid. Accepted values are dm=0,1,2.')
