@@ -1,4 +1,4 @@
-import json
+from moseq2_nlp.utils import ensure_dir, write_yaml
 import os
 import time
 
@@ -10,10 +10,10 @@ from moseq2_nlp.models import DocumentEmbedding
 from moseq2_nlp.data import load_data
 
 
-def train(name, save_dir, model_path, index_path, timepoint, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
+def train(name, save_dir, model_path, index_path, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, scoring, K, penalty, num_c, seed):
-    save_dict = locals()
-    times = {'Preamble' : 0.0, 'Data' : 0.0, 'Features' :0.0, 'Classifier' : 0.0}
+    save_dict = {'parameters': locals()}
+    times = {'Preamble': 0.0, 'Data': 0.0, 'Features': 0.0, 'Classifier': 0.0}
     start = time.time()
 
     if custom_groupings is not None:
@@ -21,22 +21,19 @@ def train(name, save_dir, model_path, index_path, timepoint, representation, emi
     else:
         custom_groupings = []
     bad_syllables = [int(bs) for bs in bad_syllables]
-    exp_dir = os.path.join(save_dir, name)
-    if not os.path.exists(exp_dir):
-        os.makedirs(exp_dir)
+    exp_dir = ensure_dir(os.path.join(save_dir, name))
 
     times['Preamble'] = time.time() - start
 
     start = time.time()
-    print('Getting data') 
+    print('Getting data')
     labels, usages, transitions, sentences, bigram_sentences = load_data(model_path,
                                                         index_path,
                                                         emissions=emissions,
                                                         custom_groupings=custom_groupings,
                                                         num_syllables=num_syllables,
                                                         num_transitions=num_transitions,
-                                                        bad_syllables=bad_syllables,
-                                                        timepoint=timepoint)
+                                                        bad_syllables=bad_syllables)
 
     times['Data'] = time.time() - start
 
@@ -69,12 +66,14 @@ def train(name, save_dir, model_path, index_path, timepoint, representation, emi
     best_C     = Cs[np.argmax(scores.mean((0,1)))]
     times['Classifier'] = time.time() - start
 
-    print('Best {}: {}'.format(scoring, best_score))
-    print('Best C: {}'.format(best_C))
+    save_dict['model_performance'] = {
+        f'best_{scoring}': best_score,
+        'best_C': best_C
+    }
+    print(f'Best {scoring}: {best_score}')
+    print(f'Best C: {best_C}')
 
     save_dict['compute_times'] = times
-    fn = os.path.join(exp_dir, 'exp_params.txt')
-    with open(fn, 'w') as file:
-        file.write(json.dumps(save_dict, indent=1))
-    np.save(os.path.join(exp_dir, '{}.npy'.format(scoring)), best_score)
+    write_yaml(os.path.join(exp_dir, 'exp_params.yaml'), save_dict)
+    np.save(os.path.join(exp_dir, f'{scoring}.npy'), best_score)
     np.save(os.path.join(exp_dir, 'best_C.npy'), best_C)

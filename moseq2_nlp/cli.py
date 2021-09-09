@@ -25,9 +25,8 @@ def cli():
 @click.option('--save-dir', type=str, default=os.getcwd())
 @click.option('--model-path', type=click.Path(exists=True))
 @click.option('--index-path', type=click.Path(exists=True))
-@click.option('--timepoint', type=int)
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
-@click.option('--emissions', is_flag=True)
+@click.option('--emissions', type=bool, is_flag=True)
 @click.option('--custom-groupings', multiple=True, nargs='?', default=[])
 @click.option('--num-syllables', type=int, default=70)
 @click.option('--num-transitions', type=int, default=300)
@@ -36,17 +35,17 @@ def cli():
 @click.option('--embedding-dim', type=int, default=300)
 @click.option('--embedding-window', type=int, default=20)
 @click.option('--embedding-epochs', type=int, default=50)
-@click.option('--bad-syllables', multiple=True, default=[-5])
+@click.option('--bad-syllables', type=int, multiple=True, default=[-5])
 @click.option('--scoring', type=str, default='accuracy')
 @click.option('--k', type=int, default=1)
 @click.option('--penalty', type=str, default='l2')
 @click.option('--num-c', type=int, default=11)
 @click.option('--seed', type=int, default=0)
 @click.option('--config-file', type=click.Path())
-def train(name, save_dir, model_path, index_path, timepoint, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
+def train(name, save_dir, model_path, index_path, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, scoring, k, penalty, num_c, seed, config_file):
 
-    trainer.train(name, save_dir, model_path, index_path, timepoint, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
+    trainer.train(name, save_dir, model_path, index_path, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, scoring, k, penalty, num_c, seed)
 
 
