@@ -67,13 +67,13 @@ def train(name, save_dir, model_path, index_path, representation, emissions, cus
     times['Classifier'] = time.time() - start
 
     save_dict['model_performance'] = {
-        f'best_{scoring}': best_score,
-        'best_C': best_C
+        f'best_{scoring}': float(best_score),
+        'best_C': float(best_C)
     }
     print(f'Best {scoring}: {best_score}')
     print(f'Best C: {best_C}')
 
     save_dict['compute_times'] = times
-    write_yaml(os.path.join(exp_dir, 'exp_params.yaml'), save_dict)
+    write_yaml(os.path.join(exp_dir, 'experiment_info.yaml'), save_dict)
     np.save(os.path.join(exp_dir, f'{scoring}.npy'), best_score)
     np.save(os.path.join(exp_dir, 'best_C.npy'), best_C)
