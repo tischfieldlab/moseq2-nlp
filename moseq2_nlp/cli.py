@@ -1,15 +1,18 @@
-from moseq2_nlp.utils import command_with_config, write_yaml
-import click
-import moseq2_nlp.train as trainer
 import os
 
-orig_init = click.core.Option.__init__
+import click
 
+import moseq2_nlp.train as trainer
+from moseq2_nlp.utils import command_with_config, write_yaml
+
+
+# Here we will monkey-patch click Option __init__
+# in order to force showing default values for all options
+orig_init = click.core.Option.__init__
 
 def new_init(self, *args, **kwargs):
     orig_init(self, *args, **kwargs)
     self.show_default = True
-
 
 click.core.Option.__init__ = new_init
 

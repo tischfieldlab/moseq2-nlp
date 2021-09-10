@@ -1,6 +1,6 @@
-import numpy as np
 import subprocess
 
+import numpy as np
 
 fn = 'grid_search_commands.txt'
 

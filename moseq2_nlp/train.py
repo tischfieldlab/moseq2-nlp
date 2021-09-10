@@ -1,4 +1,3 @@
-from moseq2_nlp.utils import ensure_dir, write_yaml
 import os
 import time
 
@@ -6,8 +5,9 @@ import numpy as np
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.model_selection import KFold
 
-from moseq2_nlp.models import DocumentEmbedding
 from moseq2_nlp.data import load_data
+from moseq2_nlp.models import DocumentEmbedding
+from moseq2_nlp.utils import ensure_dir, write_yaml
 
 
 def train(name, save_dir, model_path, index_path, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,

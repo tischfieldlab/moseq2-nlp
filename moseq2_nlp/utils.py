@@ -1,5 +1,6 @@
 import errno
 import os
+from typing import Type
 
 import click
 import ruamel.yaml as yaml
@@ -7,7 +8,22 @@ import ruamel.yaml as yaml
 
 # from https://stackoverflow.com/questions/46358797/
 # python-click-supply-arguments-and-options-from-a-configuration-file
-def command_with_config(config_file_param_name):
+def command_with_config(config_file_param_name: str) -> Type[click.Command]:
+    ''' Create and return a class inheriting `click.Command` which accepts a configuration file
+        containing arguments/options accepted by the command.
+
+        The returned class should be passed to the `@click.Commnad` parameter `cls`:
+
+        ```
+        @cli.command(name='command-name', cls=command_with_config('config_file'))
+        ```
+
+    Parameters:
+        config_file_param_name (str): name of the parameter that accepts a configuration file
+
+    Returns:
+        class (Type[click.Command]): Class to use when constructing a new click.Command
+    '''
 
     class custom_command_class(click.Command):
 
@@ -45,14 +61,13 @@ def command_with_config(config_file_param_name):
 
 
 def read_yaml(yaml_file: str) -> dict:
-    '''
-    Reads yaml file into dict object
-    Parameters
-    ----------
-    yaml_file (str): path to yaml file
-    Returns
-    -------
-    return_dict (dict): dict of yaml contents
+    ''' Read a yaml file into dict object
+
+    Parameters:
+        yaml_file (str): path to yaml file
+
+    Returns:
+        return_dict (dict): dict of yaml contents
     '''
     with open(yaml_file, 'r') as f:
         yml = yaml.YAML(typ='safe')
@@ -60,14 +75,12 @@ def read_yaml(yaml_file: str) -> dict:
 
 
 def write_yaml(yaml_file: str, data: dict) -> None:
-    '''
-    Reads yaml file into dict object
-    Parameters
-    ----------
-    yaml_file (str): path to yaml file
-    data (Any): data to write to `yaml_file`
-    '''
+    ''' Write a dict object into a yaml file
 
+    Parameters:
+        yaml_file (str): path to yaml file
+        data (dict): dict of data to write to `yaml_file`
+    '''
     with open(yaml_file, 'w') as f:
         yml = yaml.YAML(typ='safe')
         yml.default_flow_style = False
@@ -75,7 +88,13 @@ def write_yaml(yaml_file: str, data: dict) -> None:
 
 
 def ensure_dir(path: str) -> str:
-    ''' Creats the directories specified by path if they do not already exist.
+    ''' Creates the directories specified by path if they do not already exist.
+
+    Parameters:
+        path (str): path to directory that should be created
+
+    Returns:
+        return_path (str): path to the directory that now exists
     '''
     if not os.path.exists(path):
         try:
@@ -87,4 +106,3 @@ def ensure_dir(path: str) -> str:
             if exception.errno != errno.EEXIST:
                 raise
     return path
-#end ensure_dir()
