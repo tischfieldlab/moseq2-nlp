@@ -1,5 +1,6 @@
 import os
 import time
+from typing import List, Literal
 
 import numpy as np
 from sklearn.linear_model import LogisticRegressionCV
@@ -9,9 +10,16 @@ from moseq2_nlp.data import load_data
 from moseq2_nlp.models import DocumentEmbedding
 from moseq2_nlp.utils import ensure_dir, write_yaml
 
+Representation = Literal['embeddings', 'usages', 'transitions']
+Penalty = Literal['l1', 'l2', 'elasticnet']
 
-def train(name, save_dir, model_path, index_path, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
-          embedding_epochs, bad_syllables, scoring, K, penalty, num_c, seed):
+def train(name: str, save_dir: str, model_path: str, index_path: str, representation: Representation, emissions: bool, custom_groupings: List[str],
+          num_syllables: int, num_transitions: int, min_count: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,
+          embedding_epochs: int, bad_syllables: List[int], scoring, K: int, penalty: Penalty, num_c: int, seed:int):
+    ''' Train a model.
+    
+    '''
+
     save_dict = {'parameters': locals()}
     times = {'Preamble': 0.0, 'Data': 0.0, 'Features': 0.0, 'Classifier': 0.0}
     start = time.time()

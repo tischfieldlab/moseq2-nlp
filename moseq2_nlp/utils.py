@@ -1,9 +1,11 @@
 import errno
 import os
-from typing import Type
+from gettext import gettext
+from typing import Any, Dict, List, Optional, Sequence, Type
 
 import click
 import ruamel.yaml as yaml
+from click.shell_completion import CompletionItem
 
 
 # from https://stackoverflow.com/questions/46358797/
@@ -60,6 +62,64 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
     return custom_command_class
 
 
+def get_command_defaults(command: click.Command):
+    ''' Get the defualt values for the options of `command`
+    '''
+    return {tmp.name: tmp.default for tmp in command.params if not tmp.required}
+
+
+class IntChoice(click.ParamType):
+    name = "intchoice"
+
+    def __init__(self, choices: Sequence[int]) -> None:
+        self.choices = choices
+
+    def to_info_dict(self) -> Dict[str, Any]:
+        info_dict = super().to_info_dict()
+        info_dict["choices"] = self.choices
+        return info_dict
+
+    def get_metavar(self, param: click.Parameter) -> str:
+        choices_str = "|".join([str(c) for c in self.choices])
+
+        # Use curly braces to indicate a required argument.
+        if param.required and param.param_type_name == "argument":
+            return f"{{{choices_str}}}"
+
+        # Use square braces to indicate an option or optional argument.
+        return f"[{choices_str}]"
+
+    def get_missing_message(self, param: click.Parameter) -> str:
+        return gettext("Choose from:\n\t{choices}").format(choices=",\n\t".join([str(c) for c in self.choices]))
+
+    def convert(
+        self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]
+    ) -> Any:
+        return int(str(value))
+
+    def __repr__(self) -> str:
+        return f"Choice({list([str(c) for c in self.choices])})"
+
+    def shell_complete(
+        self, ctx: click.Context, param: click.Parameter, incomplete: str
+    ) -> List[CompletionItem]:
+        """Complete choices that start with the incomplete value.
+
+        :param ctx: Invocation context for this command.
+        :param param: The parameter that is requesting completion.
+        :param incomplete: Value being completed. May be empty.
+
+        .. versionadded:: 8.0
+        """
+
+        str_choices = map(str, self.choices)
+
+        incomplete = incomplete.lower()
+        matched = (c for c in str_choices if c.lower().startswith(incomplete))
+
+        return [CompletionItem(c) for c in matched]
+
+
 def read_yaml(yaml_file: str) -> dict:
     ''' Read a yaml file into dict object
 
@@ -96,6 +156,7 @@ def ensure_dir(path: str) -> str:
     Returns:
         return_path (str): path to the directory that now exists
     '''
+    path = os.path.abspath(path)
     if not os.path.exists(path):
         try:
             os.makedirs(path)

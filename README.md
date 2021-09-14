@@ -28,18 +28,17 @@ pip install git+ssh://git@github.com/tischfieldlab/moseq2-nlp.git   # if you lik
 ## Basic usage
 Options for training can be specified via a yaml configuration file. To generate a template configuration file, execute the following command:
 ```
-moseq2-nlp generate-config --output-file config.yaml
+moseq2-nlp generate-train-config --output-file ./train-config.yaml
 ```
 
 Edit the configuration in the yaml file. Any arguments/options supplied on the command line will override those in the config file.
 
 
-To train a classifier on MoSeq syllables, run:
+To train a classifier on MoSeq data, run:
 ```
-moseq2-nlp train --config-file <path_to_config_file>
+moseq2-nlp train --config-file ./train-config.yaml
 ```
 
-`moseq2-nlp train --config-file ./config.yaml`
 
 ## Arguments
 All arguments can be used in the command line (e.g. `moseq2-nlp train --myarg <arg>`) or by adjusting the relevant key in `config.yaml`.
@@ -65,3 +64,46 @@ All arguments can be used in the command line (e.g. `moseq2-nlp train --myarg <a
 * `penalty` (str): Type of penalty used by logistic regressor. Should be recognized by this function.
 * `num-C` (int): How many regularization terms to search over, logarithmically spaced between 1e-5 and 1e5.
 * `config-file` (str): Path to a configuration file to read containing any of the above arguments.
+
+
+## Running Parameter Scans
+It is often useful to run hyperparameter searches, à la grid-search.
+
+### Generate Grid-Search Configuration
+Options for grid search can be specified via a yaml configuration file. To generate a template configuration file for grid-search, execute the following command:
+```
+moseq2-nlp generate-gridsearch-config --output-file ./gridsearch-config.yaml
+```
+
+### Edit Grid-Search Configuration
+There are a few important sections of the grid-search configuration. First are the base parameters, specified by the root key `parameters`. These values are the same as the train configuration keys, and provide default values for all parameters.
+
+The next important section of the grid-search configuration is the root key `scans`. The value of this section sould be a list of scan configurations. Each scan configuration consists of two possible keys:
+- `parameters`: dictionary of train parameters which will override the base parameters.
+- `scan`: list of parameter scan configurations.
+
+Each scan configuration must include the following keys:
+- `parameter`: name of the parameter to scan over
+- `type`: data type of the parameter value (e.x. `bool`, `int`, or `float`)
+- `scale`: type of scale to use to generate values. Options include:
+    - `list`: `range` will be interpreted as a literal list of values to be used
+    - `linear`: `range` will be interpreted as the arguments to numpy.linspace
+    - `log`: `range` will be interpreted as the arguments to numpy.logspace
+
+For each scan configuration, the cartesian product of scan values is taken and combined with scan-specific parameters and base parameters.
+
+### Generate Grid-Search Jobs
+Once you have edited the grid-search configuration to your liking, you may now generate the files and commands necessary to execute these jobs:
+```
+moseq2-nlp grid-search --save-dir ./job-configs ./gridsearch-config.yaml > ./jobs.sh
+```
+This will save one yaml file per job generated into the directory specified by the parameter `--save-dir`, and will output the job invocation commands to `stdout`. Given the example above, the following would execute the generated jobs:
+```
+chmod +x ./jobs.sh
+./jobs
+```
+
+### Cluster Support for Grid-Search
+We provide some basic support for generating the job commands for use on computer cluster. The default is to output commands for running locally.
+
+To generate commands sutible for submission to a SLURM cluster, utilize the option `--cluster-type slurm` and the related `--slurm-*` options to specify slurm scheduler options.

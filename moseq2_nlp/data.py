@@ -1,4 +1,6 @@
 
+from typing import List
+
 import numpy as np
 from gensim.models import Phrases
 from moseq2_viz.model.util import (get_syllable_statistics,
@@ -7,7 +9,8 @@ from moseq2_viz.util import parse_index
 from tqdm import tqdm
 
 
-def load_data(model_file: str, index_file: str, **kwargs):
+def load_data(model_file: str, index_file: str, emissions: bool, num_syllables: int, num_transitions: int,
+              bad_syllables: List[int], custom_groupings: List[str]):
     ''' Load data from a moseq model
 
     Parameters:
@@ -15,11 +18,6 @@ def load_data(model_file: str, index_file: str, **kwargs):
         index_file (str): path to moseq model index yaml file
         ...
     '''
-    emissions = kwargs['emissions']
-    num_syllables = kwargs['num_syllables']
-    num_transitions=kwargs['num_transitions']
-    bad_syllables=kwargs['bad_syllables']
-    custom_groupings = kwargs['custom_groupings']
 
     _, sorted_index = parse_index(index_file)
 
