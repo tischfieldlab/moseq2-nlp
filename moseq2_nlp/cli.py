@@ -38,7 +38,7 @@ def cli():
 @click.option('--index-path', type=click.Path(exists=True))
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
 @click.option('--emissions', type=bool, is_flag=True)
-@click.option('--custom-groupings', multiple=True, nargs='?', default=[])
+@click.option('--custom-groupings', type=str, multiple=True, default=[])
 @click.option('--num-syllables', type=int, default=70)
 @click.option('--num-transitions', type=int, default=300)
 @click.option('--min-count', type=int, default=1)
