@@ -47,7 +47,7 @@ def get_usage_representation(model_file: str, index_file: str, group_map: Dict[s
 
     usage_vals = []
     out_groups = []
-    for l, g in tqdm(zip(model['labels'], label_group)):
+    for l, g in zip(tqdm(model['labels']), label_group):
         u, _ = get_syllable_statistics(l, max_syllable=max_syllable, count='usage')
         u_vals = list(u.values())
         total_u = np.sum(u_vals)
@@ -64,7 +64,7 @@ def get_transition_representation(model_file: str, index_file: str, group_map: D
 
     tm_vals = []
     out_groups = []
-    for l, g in tqdm(zip(model['labels'], label_group)):
+    for l, g in zip(tqdm(model['labels']), label_group):
         tm = get_transition_matrix([l], combine=True, max_syllable=max_syllable)
         tm_vals.append(tm.ravel())
         out_groups.append(group_map[g])
@@ -88,7 +88,7 @@ def get_embedding_representation(model_file: str, index_file: str, group_map: Di
 
     sentences = []
     out_groups = []
-    for l, g in tqdm(zip(model['labels'], label_group)):
+    for l, g in zip(tqdm(model['labels']), label_group):
         l = list(filter(lambda a: a not in bad_syllables, l))
         np_l = np.array(l)
         if emissions:
