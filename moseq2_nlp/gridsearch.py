@@ -124,7 +124,7 @@ def write_jobs(worker_dicts: List[dict], cluster_format: Callable[[str],str], de
         worker_dest = os.path.join(dest_dir, f"{worker['name']}.yaml")
         write_yaml(worker_dest, worker)
 
-        work_cmd = f'moseq2-nlp train --config "{worker_dest}";'
+        work_cmd = f'moseq2-nlp train --config-file "{worker_dest}";'
         full_cmd = cluster_format(work_cmd)
 
         sys.stdout.write(full_cmd+'\n')

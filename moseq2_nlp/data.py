@@ -102,7 +102,7 @@ def get_embedding_representation(model_file: str, index_file: str, group_map: Di
 
     doc_embedding = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count)
     rep = np.array(doc_embedding.fit_predict(sentences))
-    model.save(model_dest) # os.path.join(exp_dir, 'doc2vec')
+    doc_embedding.save(model_dest)
 
     return out_groups, rep
 
