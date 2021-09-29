@@ -1,9 +1,12 @@
+import glob
 import itertools
 import os
 import sys
+import uuid
 from typing import Callable, List, Literal
 
 import numpy as np
+import pandas as pd
 
 from moseq2_nlp.utils import read_yaml, write_yaml
 
@@ -178,3 +181,33 @@ def get_gridsearch_default_scans() -> List:
             }
         ]
     }]
+
+
+def find_gridsearch_results(path: str) -> pd.DataFrame:
+    ''' Find and aggregate grid search results
+
+    Parameters:
+        path (str): path to search for experiments
+    '''
+    experiments = glob.glob(os.path.join(path, '*', 'experiment_info.yaml'))
+
+    exp_data = []
+    for exp in experiments:
+        id = uuid.uuid4()
+        data = read_yaml(exp)
+
+        # tag each dict with the model ID
+        time_data = {f'time_{k}': v for k, v in data['compute_times']}
+        exp_data.append({
+            'id': id,
+            **data['parameters'],
+            **time_data,
+            **data['model_performance']
+        })
+
+    return pd.DataFrame(exp_data)
+
+
+#def decide_best_model(data: pd.DataFrame, key='best_accuracy'):
+#    pass
+

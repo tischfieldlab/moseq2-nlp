@@ -5,7 +5,7 @@ from functools import partial
 import click
 
 import moseq2_nlp.train as trainer
-from moseq2_nlp.gridsearch import (generate_grid_search_worker_params,
+from moseq2_nlp.gridsearch import (find_gridsearch_results, generate_grid_search_worker_params,
                                    get_gridsearch_default_scans,
                                    wrap_command_with_local,
                                    wrap_command_with_slurm, write_jobs)
@@ -108,6 +108,18 @@ def generate_gridsearch_config(output_file):
     output_file = os.path.abspath(output_file)
     write_yaml(output_file, params)
     print(f'Successfully generated gridsearch config file at "{output_file}".')
+
+
+
+@cli.command(name="aggregate-gridsearch-results", help="Aggregate Gridsearch results.")
+@click.argument("results_directory", type=click.Path(exists=True))
+def aggregate_gridsearch_results(results_directory):
+    
+    
+    results = find_gridsearch_results(results_directory)
+    results.to_csv(os.path.join(results_directory, 'gridsearch-aggregate-results.tsv'), sep='\t', index=False)
+
+
 
 
 
