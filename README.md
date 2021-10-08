@@ -19,11 +19,21 @@ pip install git+https://github.com/tischfieldlab/moseq2-viz.git     # if you lik
 pip install git+ssh://git@github.com/tischfieldlab/moseq2-viz.git   # if you like to use git over ssh
 ```
 
-Install this repo:
+Install this repo
+
+For *production* usage:
 ```
 pip install git+https://github.com/tischfieldlab/moseq2-nlp.git     # if you like to use git over https
 pip install git+ssh://git@github.com/tischfieldlab/moseq2-nlp.git   # if you like to use git over ssh
 ```
+OR for *development* usage:
+```
+git clone https://github.com/tischfieldlab/moseq2-nlp.git     # if you like to use git over https
+git clone ssh://git@github.com/tischfieldlab/moseq2-nlp.git   # if you like to use git over ssh
+
+pip install -e moseq2-nlp
+```
+
 
 ## Basic usage
 Options for training can be specified via a yaml configuration file. To generate a template configuration file, execute the following command:
