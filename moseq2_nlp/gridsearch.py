@@ -139,7 +139,7 @@ def write_jobs(worker_dicts: List[dict], cluster_format: CommandWrapper, dest_di
         write_yaml(worker_dest, worker)
 
         ensure_dir(worker['save_dir'])
-        output = os.path.join(worker['save_dir'], 'experiment.log')
+        output = os.path.join(worker['save_dir'], f"{worker['name']}.log")
 
         work_cmd = f'moseq2-nlp train --config-file "{worker_dest}";'
         full_cmd = cluster_format(work_cmd, output=output)
