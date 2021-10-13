@@ -3,7 +3,7 @@ import itertools
 import os
 import sys
 import uuid
-from typing import Callable, List, Literal
+from typing import Any, Callable, List, Literal, Protocol
 
 import numpy as np
 import pandas as pd
@@ -31,6 +31,10 @@ def get_scan_values(scale: Literal['log', 'linear', 'list'], range: List, type='
         return np.logspace(*ls_args).astype(type).tolist()
     else:
         raise ValueError(f'Unknown scale {scale}')
+
+
+class CommandWrapper(Protocol):
+    def __call__(self, cmd: str, output: str=None, **kwds: Any) -> str: ...
 
 
 def wrap_command_with_slurm(cmd: str, partition: str, ncpus: int, memory: str, wall_time: str, output: str=None) -> str:
@@ -122,7 +126,7 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
     return worker_dicts
 
 
-def write_jobs(worker_dicts: List[dict], cluster_format: Callable[[str, str],str], dest_dir: str) -> None:
+def write_jobs(worker_dicts: List[dict], cluster_format: CommandWrapper, dest_dir: str) -> None:
     ''' Write job configurations to YAML files, and write job invocations to stdout
 
     Parameters:
@@ -137,7 +141,7 @@ def write_jobs(worker_dicts: List[dict], cluster_format: Callable[[str, str],str
         output = os.path.join(worker['save_dir'], 'experiment.log')
 
         work_cmd = f'moseq2-nlp train --config-file "{worker_dest}";'
-        full_cmd = cluster_format(work_cmd, output)
+        full_cmd = cluster_format(work_cmd, output=output)
 
         sys.stdout.write(full_cmd+'\n')
 
