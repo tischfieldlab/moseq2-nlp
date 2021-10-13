@@ -8,7 +8,7 @@ from typing import Any, Callable, List, Literal, Protocol
 import numpy as np
 import pandas as pd
 
-from moseq2_nlp.utils import read_yaml, write_yaml
+from moseq2_nlp.utils import ensure_dir, read_yaml, write_yaml
 
 
 def get_scan_values(scale: Literal['log', 'linear', 'list'], range: List, type='float') -> List:
@@ -138,6 +138,7 @@ def write_jobs(worker_dicts: List[dict], cluster_format: CommandWrapper, dest_di
         worker_dest = os.path.join(dest_dir, f"{worker['name']}.yaml")
         write_yaml(worker_dest, worker)
 
+        ensure_dir(worker['save_dir'])
         output = os.path.join(worker['save_dir'], 'experiment.log')
 
         work_cmd = f'moseq2-nlp train --config-file "{worker_dest}";'
