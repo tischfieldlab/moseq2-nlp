@@ -51,9 +51,9 @@ def wrap_command_with_slurm(cmd: str, partition: str, ncpus: int, memory: str, w
     Returns:
         (str): the slurm wrapped command
     '''
-    preamble = f'sbatch --partition {partition} --nodes 1 --ntasks-per-node 1 --cpus-per-task={ncpus} --mem {memory} --time {wall_time}'
+    preamble = f'sbatch --partition {partition} --nodes 1 --ntasks-per-node 1 --cpus-per-task {ncpus} --mem {memory} --time {wall_time}'
     if output is not None:
-        preamble += f' --output {output}'
+        preamble += f' --output "{output}"'
     escaped_cmd = cmd.replace('"', r'\"')
     return f'{preamble} --wrap "{escaped_cmd}";'
 
@@ -71,7 +71,7 @@ def wrap_command_with_local(cmd: str, output: str=None) -> str:
     if output is not None:
         return cmd
     else:
-        return cmd + f' > {output}'
+        return cmd + f' > "{output}"'
 
 
 def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
