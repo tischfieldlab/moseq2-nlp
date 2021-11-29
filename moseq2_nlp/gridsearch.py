@@ -3,12 +3,12 @@ import itertools
 import os
 import sys
 import uuid
-from typing import Callable, List, Literal
+from typing import Any, Callable, List, Literal, Protocol
 
 import numpy as np
 import pandas as pd
 
-from moseq2_nlp.utils import read_yaml, write_yaml
+from moseq2_nlp.utils import ensure_dir, read_yaml, write_yaml
 
 
 def get_scan_values(scale: Literal['log', 'linear', 'list'], range: List, type='float') -> List:
@@ -33,7 +33,11 @@ def get_scan_values(scale: Literal['log', 'linear', 'list'], range: List, type='
         raise ValueError(f'Unknown scale {scale}')
 
 
-def wrap_command_with_slurm(cmd: str, partition: str, ncpus: int, memory: str, wall_time: str) -> str:
+class CommandWrapper(Protocol):
+    def __call__(self, cmd: str, output: str=None, **kwds: Any) -> str: ...
+
+
+def wrap_command_with_slurm(cmd: str, partition: str, ncpus: int, memory: str, wall_time: str, output: str=None) -> str:
     ''' Wraps a command to be run as a SLURM sbatch job
 
     Parameters:
@@ -42,25 +46,32 @@ def wrap_command_with_slurm(cmd: str, partition: str, ncpus: int, memory: str, w
         ncpus (int): Number of CPU cores to allocate to this job
         memory (str): Amount of memory to allocate to this job. ex: "2GB"
         wall_time (str): Amount of wall time allocated to this job. ex: "1:00:00"
+        output (str): Path of file to write output to
 
     Returns:
         (str): the slurm wrapped command
     '''
-    preamble = f'sbatch --partition {partition} --nodes 1 --ntasks-per-node 1 --cpus-per-task={ncpus} --mem {memory} --time {wall_time}'
+    preamble = f'sbatch --partition {partition} --nodes 1 --ntasks-per-node 1 --cpus-per-task {ncpus} --mem {memory} --time {wall_time}'
+    if output is not None:
+        preamble += f' --output "{output}"'
     escaped_cmd = cmd.replace('"', r'\"')
     return f'{preamble} --wrap "{escaped_cmd}";'
 
 
-def wrap_command_with_local(cmd: str) -> str:
+def wrap_command_with_local(cmd: str, output: str=None) -> str:
     ''' Wraps a command to be run locally. Admittedly, this does not do too much
 
     Parameters:
         cmd (str): Command to be wrapped
+        output (str): Path of file to write output to
 
     Returns:
         (str): the wrapped command
     '''
-    return cmd
+    if output is not None:
+        return cmd
+    else:
+        return cmd + f' > "{output}"'
 
 
 def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
@@ -115,7 +126,7 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
     return worker_dicts
 
 
-def write_jobs(worker_dicts: List[dict], cluster_format: Callable[[str],str], dest_dir: str) -> None:
+def write_jobs(worker_dicts: List[dict], cluster_format: CommandWrapper, dest_dir: str) -> None:
     ''' Write job configurations to YAML files, and write job invocations to stdout
 
     Parameters:
@@ -127,8 +138,11 @@ def write_jobs(worker_dicts: List[dict], cluster_format: Callable[[str],str], de
         worker_dest = os.path.join(dest_dir, f"{worker['name']}.yaml")
         write_yaml(worker_dest, worker)
 
+        ensure_dir(worker['save_dir'])
+        output = os.path.join(worker['save_dir'], f"{worker['name']}.log")
+
         work_cmd = f'moseq2-nlp train --config-file "{worker_dest}";'
-        full_cmd = cluster_format(work_cmd)
+        full_cmd = cluster_format(work_cmd, output=output)
 
         sys.stdout.write(full_cmd+'\n')
 
