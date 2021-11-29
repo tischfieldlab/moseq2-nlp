@@ -3,23 +3,25 @@ import time
 from typing import List, Literal
 
 import numpy as np
+from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegressionCV
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, cross_val_score
 
 from moseq2_nlp.data import get_embedding_representation, get_transition_representation, get_usage_representation, load_groups
 from moseq2_nlp.utils import ensure_dir, write_yaml
 
 Representation = Literal['embeddings', 'usages', 'transitions']
+Classifier = Literal['logistic_regression', 'svm']
 Penalty = Literal['l1', 'l2', 'elasticnet']
 
-
-def train(name: str, save_dir: str, model_path: str, index_path: str, representation: Representation, emissions: bool, custom_groupings: List[str],
+def train(name: str, save_dir: str, model_path: str, index_path: str, representation: Representation, classifier: Classifier, emissions: bool, custom_groupings: List[str],
           num_syllables: int, num_transitions: int, min_count: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,
-          embedding_epochs: int, bad_syllables: List[int], scoring: str, K: int, penalty: Penalty, num_c: int, seed:int):
+          embedding_epochs: int, bad_syllables: List[int], scoring: str, K: int, penalty: Penalty, num_c: int, kernel: str, seed:int):
+
+    np.random.seed(seed)    
 
     save_dict = {'parameters': locals()}
     times = {'Preamble': 0.0, 'Data': 0.0, 'Features': 0.0, 'Classifier': 0.0}
-
 
     start = time.time()
 
@@ -28,7 +30,6 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
     exp_dir = ensure_dir(os.path.join(save_dir, name))
 
     times['Preamble'] = time.time() - start
-
 
     start = time.time()
     print('Getting features')
@@ -51,7 +52,11 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
 
     start = time.time()
     print('Training classifier')
-    best_C, best_score = train_regressor(features, labels, K, scoring, penalty, num_c, seed)
+    if classifier == 'logistic_regression':
+        best_C, best_score = train_regressor(features, labels, K, scoring, penalty, num_c, seed)
+    elif classifier == 'svm':
+        best_C, best_score = train_svm(features, labels, kernel, K, scoring, penalty, num_c, seed)
+    
     times['Classifier'] = time.time() - start
 
 
@@ -101,7 +106,35 @@ def train_regressor(features, labels, K: int, scoring: str, penalty: Penalty, nu
 
     return best_C, best_score
 
+def train_svm(features, labels, kernel: str, K: int, scoring: str, penalty: Penalty, num_c: int, seed: int):
+    
+    Cs = np.logspace(-5, 5, num_c)
+    kf = n_splits=int(len(labels) / float(K))
+    all_scores = []
 
+    params = {
+        'kernel': kernel,
+        'random_state': seed,
+        'class_weight': 'balanced',
+        'tol': 1e-6,
+        'max_iter': 2000
+    }
+
+    for C in Cs:
+        # Load and train classifier
+        params.update({
+            'C': C,
+        })
+
+        clf = SVC(**params)
+        scores = cross_val_score(clf, features, labels, cv=kf, scoring=scoring)
+        all_scores.append(scores)
+    all_scores = np.array(all_scores) # nm_C x nm_classes
+    best_C_ind = np.argmax(all_scores.mean(1))
+    best_C     = Cs[best_C_ind]
+    best_score = all_scores[best_C_ind].mean()
+
+    return best_C, best_score
 
 # def train(name: str, save_dir: str, model_path: str, index_path: str, representation: Representation, emissions: bool, custom_groupings: List[str],
 #           num_syllables: int, num_transitions: int, min_count: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,

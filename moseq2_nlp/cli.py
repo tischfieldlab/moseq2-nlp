@@ -1,5 +1,6 @@
 import os
 import sys
+import distutils
 from functools import partial
 
 import click
@@ -29,23 +30,23 @@ click.core.Option.__init__ = new_init # type: ignore
 def cli():
     pass
 
-
-
 @cli.command(name='train', cls=command_with_config('config_file'), help='train a classifier')
 @click.option('--name', type=str)
 @click.option('--save-dir', type=str, default=os.getcwd())
 @click.option('--model-path', type=click.Path(exists=True))
 @click.option('--index-path', type=click.Path(exists=True))
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
-@click.option('--emissions', type=bool, is_flag=True)
+@click.option('--classifier', type=click.Choice(['logistic_regression', 'svm']), default='logistic_regression')
+@click.option('--kernel', type=click.Choice(['linear', 'poly', 'rbf', 'sigmoid']), default='rbf')
+@click.option('--emissions', is_flag=True, type=lambda x:bool(distutils.util.strtobool(x)))
 @click.option('--custom-groupings', type=str, multiple=True, default=[])
 @click.option('--num-syllables', type=int, default=70)
 @click.option('--num-transitions', type=int, default=300)
 @click.option('--min-count', type=int, default=1)
 @click.option('--dm', default=2, type=IntChoice([0, 1, 2]))
-@click.option('--embedding-dim', type=int, default=300)
-@click.option('--embedding-window', type=int, default=20)
-@click.option('--embedding-epochs', type=int, default=50)
+@click.option('--embedding-dim', type=int, default=70)
+@click.option('--embedding-window', type=int, default=4)
+@click.option('--embedding-epochs', type=int, default=250)
 @click.option('--bad-syllables', type=int, multiple=True, default=[-5])
 @click.option('--scoring', type=str, default='accuracy')
 @click.option('--k', type=int, default=1)
@@ -53,23 +54,18 @@ def cli():
 @click.option('--num-c', type=int, default=11)
 @click.option('--seed', type=int, default=0)
 @click.option('--config-file', type=click.Path())
-def train(name, save_dir, model_path, index_path, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
-          embedding_epochs, bad_syllables, scoring, k, penalty, num_c, seed, config_file):
+def train(name, save_dir, model_path, index_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
+          embedding_epochs, bad_syllables, scoring, k, penalty, num_c, kernel, seed, config_file):
 
-    trainer.train(name, save_dir, model_path, index_path, representation, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
-          embedding_epochs, bad_syllables, scoring, k, penalty, num_c, seed)
-
-
+    trainer.train(name, save_dir, model_path, index_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
+          embedding_epochs, bad_syllables, scoring, k, penalty, num_c, kernel, seed)
 
 @cli.command(name="generate-train-config", help="Generates a configuration file that holds editable options for training parameters.")
 @click.option('--output-file', '-o', type=click.Path(), default='train-config.yaml')
 def generate_train_config(output_file):
-
     output_file = os.path.abspath(output_file)
     write_yaml(output_file, get_command_defaults(train))
     print(f'Successfully generated train config file at "{output_file}".')
-
-
 
 @cli.command(name='grid-search', help='grid search hyperparameters')
 @click.argument("scan_file", type=click.Path(exists=True))
