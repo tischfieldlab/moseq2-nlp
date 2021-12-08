@@ -48,7 +48,7 @@ def get_usage_representation(model_file: str, index_file: str, group_map: Dict[s
     usage_vals = []
     out_groups = []
     for l, g in zip(tqdm(model['labels']), label_group):
-        if g in group_map.keys()
+        if g in group_map.keys():
             u, _ = get_syllable_statistics(l, max_syllable=max_syllable, count='usage')
             u_vals = list(u.values())
             total_u = np.sum(u_vals)
