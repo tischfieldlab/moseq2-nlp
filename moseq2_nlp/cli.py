@@ -1,9 +1,10 @@
 import os
 import sys
-import distutils
+from distutils import util
 from functools import partial
 
 import click
+from numpy.random import randint, choice
 
 import moseq2_nlp.train as trainer
 from moseq2_nlp.gridsearch import (find_gridsearch_results, generate_grid_search_worker_params,
@@ -12,6 +13,9 @@ from moseq2_nlp.gridsearch import (find_gridsearch_results, generate_grid_search
                                    wrap_command_with_slurm, write_jobs)
 from moseq2_nlp.utils import (IntChoice, command_with_config, ensure_dir,
                               get_command_defaults, write_yaml)
+
+from moseq2_nlp.data import get_raw_data
+from tqdm import tqdm
 
 # Here we will monkey-patch click Option __init__
 # in order to force showing default values for all options
@@ -38,7 +42,7 @@ def cli():
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
 @click.option('--classifier', type=click.Choice(['logistic_regression', 'svm']), default='logistic_regression')
 @click.option('--kernel', type=click.Choice(['linear', 'poly', 'rbf', 'sigmoid']), default='rbf')
-@click.option('--emissions', is_flag=True, type=lambda x:bool(distutils.util.strtobool(x)))
+@click.option('--emissions', is_flag=True, type=lambda x:bool(util.strtobool(x)))
 @click.option('--custom-groupings', type=str, multiple=True, default=[])
 @click.option('--num-syllables', type=int, default=70)
 @click.option('--num-transitions', type=int, default=300)
@@ -66,6 +70,52 @@ def generate_train_config(output_file):
     output_file = os.path.abspath(output_file)
     write_yaml(output_file, get_command_defaults(train))
     print(f'Successfully generated train config file at "{output_file}".')
+
+@cli.command(name="make-random-documents", help="Splits frames or emissions into sentences of random lengths and keeps track of which sentences belong to what class.")
+@click.option('--model_path', type=str, default='/cs/usr/ricci/data/abraira/robust_septrans_model_20min_1000.p')
+@click.option('--index_path', type=str, default='/cs/usr/ricci/data/abraira/moseq2-index.sex-genotype.20min.yaml')
+@click.option('--splits',type=str,multiple=True,default=[.4,.2,.4])
+@click.option('--min_length', type=int, default=4)
+@click.option('--max_length', type=int, default=32)
+@click.option('--save_dir', type=str, default='/cs/usr/ricci/data/abraira/docs')
+@click.option('--emissions', '-e',type=lambda x:bool(util.strtobool(x)))
+def make_random_documents(model_path, index_path, splits, min_length, max_length, save_dir, emissions):
+    print(f'Gathering raw data for model "{model_path}".')
+    sentences, out_groups = get_raw_data(model_path, index_path, emissions=emissions)
+
+    splits = [float(s) for s in splits]
+
+    fn_train = os.path.join(save_dir, 'ptb.train.txt')
+    fn_val = os.path.join(save_dir, 'ptb.valid.txt')
+    fn_test = os.path.join(save_dir, 'ptb.test.txt')
+    
+    labels_train = os.path.join(save_dir, 'train_labels.txt')
+    labels_val = os.path.join(save_dir, 'valid_labels.txt')
+    labels_test  = os.path.join(save_dir, 'test_labels.txt')
+
+    print('Generating random documents.')
+    with open(fn_train, 'w') as f1,  open(fn_val, 'w') as f2, open(fn_test, 'w') as f3, open(labels_train, 'w') as f4, open(labels_val, 'w') as f5, open(labels_test, 'w') as f6:
+        for s, sentence in tqdm(enumerate(sentences)):
+            counter = 0
+            while counter < len(sentence):
+                L = min(randint(min_length, high=max_length), len(sentence) - counter)
+                snippet = ' '.join(sentence[counter:counter + L])
+                counter += L
+                which_doc = choice([f1, f2, f3],p=splits)
+
+                if 'train' in which_doc.name:
+                    which_lab = f4
+                elif 'valid' in which_doc.name:
+                    which_lab = f5
+                else: 
+                    which_lab = f6
+
+                which_doc.write(snippet)
+                which_doc.write('\n')
+                which_lab.write(out_groups[s])
+                which_lab.write('\n')
+    
+    print(f'Successfully generated random train/test documents at "{save_dir}".')
 
 @cli.command(name='grid-search', help='grid search hyperparameters')
 @click.argument("scan_file", type=click.Path(exists=True))

@@ -1,4 +1,3 @@
-
 from typing import Dict, List, Literal
 
 import numpy as np
@@ -38,7 +37,26 @@ def load_groups(index_file: str, custom_groupings: List[str]) -> Dict[str, str]:
 
     return group_mapping
 
+def get_raw_data(model_file: str, index_file: str, max_syllable: int=100, emissions: bool=True, bad_syllables: List[int]=[-5]):
+    _, sorted_index = parse_index(index_file)
+    model = parse_model_results(model_file, sort_labels_by_usage=True, count='usage')
+    label_group = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
 
+    sentences = []
+    out_groups = []
+    for l, g in zip(tqdm(model['labels']), label_group):
+        l = list(filter(lambda a: a not in bad_syllables, l))
+        np_l = np.array(l)
+        if emissions:
+            cp_inds = np.concatenate((np.where(np.diff(np_l) != 0 )[0],np.array([len(l) - 1])))
+            syllables = np_l[cp_inds]
+        else:
+            syllables = np_l
+        sentence = [str(syl) for syl in syllables]
+        sentences.append(sentence)
+        out_groups.append(g)
+
+    return sentences, out_groups
 
 def get_usage_representation(model_file: str, index_file: str, group_map: Dict[str, str], max_syllable: int=100):
     _, sorted_index = parse_index(index_file)
