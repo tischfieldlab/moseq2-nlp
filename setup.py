@@ -11,6 +11,7 @@ setup(
     install_requires=[
         'numpy==1.19.2',
         'tqdm',
+        'notebook',
         'gensim==4.0.1',
         'python-Levenshtein',
         'scikit_learn==0.24.2',

@@ -1,6 +1,5 @@
 import os
 import sys
-from distutils import util
 from functools import partial
 
 import click
@@ -42,7 +41,7 @@ def cli():
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
 @click.option('--classifier', type=click.Choice(['logistic_regression', 'svm']), default='logistic_regression')
 @click.option('--kernel', type=click.Choice(['linear', 'poly', 'rbf', 'sigmoid']), default='rbf')
-@click.option('--emissions', is_flag=True, type=lambda x:bool(util.strtobool(x)))
+@click.option('--emissions', is_flag=True)
 @click.option('--custom-groupings', type=str, multiple=True, default=[])
 @click.option('--num-syllables', type=int, default=70)
 @click.option('--num-transitions', type=int, default=300)
@@ -72,18 +71,16 @@ def generate_train_config(output_file):
     print(f'Successfully generated train config file at "{output_file}".')
 
 @cli.command(name="make-random-documents", help="Splits frames or emissions into sentences of random lengths and keeps track of which sentences belong to what class.")
-@click.option('--model_path', type=str, default='/cs/usr/ricci/data/abraira/robust_septrans_model_20min_1000.p')
-@click.option('--index_path', type=str, default='/cs/usr/ricci/data/abraira/moseq2-index.sex-genotype.20min.yaml')
-@click.option('--splits',type=str,multiple=True,default=[.4,.2,.4])
-@click.option('--min_length', type=int, default=4)
-@click.option('--max_length', type=int, default=32)
-@click.option('--save_dir', type=str, default='/cs/usr/ricci/data/abraira/docs')
-@click.option('--emissions', '-e',type=lambda x:bool(util.strtobool(x)))
+@click.option('--model-path', type=str, default='/cs/usr/ricci/data/abraira/robust_septrans_model_20min_1000.p')
+@click.option('--index-path', type=str, default='/cs/usr/ricci/data/abraira/moseq2-index.sex-genotype.20min.yaml')
+@click.option('--splits',type=(float, float, float), default=(.4,.2,.4))
+@click.option('--min-length', type=int, default=4)
+@click.option('--max-length', type=int, default=32)
+@click.option('--save-dir', type=str, default='/cs/usr/ricci/data/abraira/docs')
+@click.option('--emissions', is_flag=True)
 def make_random_documents(model_path, index_path, splits, min_length, max_length, save_dir, emissions):
     print(f'Gathering raw data for model "{model_path}".')
     sentences, out_groups = get_raw_data(model_path, index_path, emissions=emissions)
-
-    splits = [float(s) for s in splits]
 
     fn_train = os.path.join(save_dir, 'ptb.train.txt')
     fn_val = os.path.join(save_dir, 'ptb.valid.txt')
