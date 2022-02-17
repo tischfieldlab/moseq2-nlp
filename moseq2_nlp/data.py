@@ -4,10 +4,10 @@ import numpy as np
 from moseq2_viz.model.util import (get_syllable_statistics,
                                    get_transition_matrix, parse_model_results)
 from moseq2_viz.util import parse_index
+from gensim.models.phrases import original_scorer
 from tqdm import tqdm
-
+import pdb
 from moseq2_nlp.models import DocumentEmbedding
-
 
 def load_groups(index_file: str, custom_groupings: List[str]) -> Dict[str, str]:
     # Get group names available in model
@@ -105,7 +105,6 @@ def get_embedding_representation(model_file: str, index_file: str, group_map: Di
     model = parse_model_results(model_file, sort_labels_by_usage=True, count='usage')
     label_group = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
 
-
     sentences = []
     out_groups = []
     for l, g in zip(tqdm(model['labels']), label_group):
@@ -126,3 +125,69 @@ def get_embedding_representation(model_file: str, index_file: str, group_map: Di
     doc_embedding.save(model_dest)
 
     return out_groups, rep
+
+def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_count):
+
+    # Unique elements in foreground seqs
+    unique_foreground_els = []
+    for el in foreground_seqs:
+        if el not in unique_foreground_els:
+            unique_foreground_els.append(el)
+
+    len_vocab = len(unique_foreground_els)
+
+    scored_bigrams = {}
+    for a in tqdm(unique_foreground_els):
+        for b in unique_foreground_els:
+            if a == b: continue
+            else: 
+                count_a = background_seqs.count(a)
+                count_b = background_seqs.count(b)
+
+                bigram = f'{a}>{b}'
+                count_ab = foreground_bigrams.count(bigram)
+                score = original_scorer(count_a, count_b, count_ab, len_vocab, min_count,-1)
+                scored_bigrams[bigram] = score
+
+    return scored_bigrams
+
+def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
+
+    # Flatten list of sequences into one long sequence (introduces artifacts?)
+    flat_foreground_seqs = [el for seq in foreground_seqs for el in seq]
+    flat_background_seqs = [el for seq in background_seqs for el in seq]
+
+    all_phrases = {}
+
+    # Calculate 2*n grams
+    for m in range(n):
+
+        # All non-unique bigrams in background and foreground sequences
+        background_bigrams = [flat_background_seqs[i] + '>' + flat_background_seqs[i+1] for i in range(len(flat_background_seqs) - 1)]
+        foreground_bigrams = [flat_foreground_seqs[i] + '>' + flat_foreground_seqs[i+1] for i in range(len(flat_foreground_seqs) - 1)]
+
+        # Score bigrams in the foreground sequences
+        print(f'Scoring bigrams: {m}')
+        scored_bigrams = score_phrases(flat_foreground_seqs, flat_background_seqs, foreground_bigrams, min_count)
+
+        # Threshold detected bigrams and replace in both the background and foreground sequences
+        print('Thresholding...')
+        #TODO: WARNING: This process will potentially eliminate some neighboring ngrams
+        thresh = threshes[m]
+        for bigram, score in tqdm(scored_bigrams.items()):
+            if score > thresh:
+                all_phrases[bigram] = score
+                while bigram in foreground_bigrams:
+                    ind = foreground_bigrams.index(bigram)
+                    del flat_foreground_seqs[ind]
+                    del flat_foreground_seqs[ind]
+                    del foreground_bigrams[ind]
+                    flat_foreground_seqs.insert(ind, bigram)
+
+                while bigram in background_bigrams:
+                    ind = background_bigrams.index(bigram)
+                    del flat_background_seqs[ind]
+                    del flat_background_seqs[ind]
+                    del background_bigrams[ind]
+                    flat_background_seqs.insert(ind, bigram)
+    return all_phrases

@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from moseq2_nlp.utils import ensure_dir, read_yaml, write_yaml
+import pdb
 
 
 def get_scan_values(scale: Literal['log', 'linear', 'list'], range: List, type='float') -> List:
@@ -211,7 +212,7 @@ def find_gridsearch_results(path: str) -> pd.DataFrame:
         data = read_yaml(exp)
 
         # tag each dict with the model ID
-        time_data = {f'time_{k}': v for k, v in data['compute_times']}
+        time_data = {f'time_{k}': v for (k, v) in data['compute_times'].items()}
         exp_data.append({
             'id': id,
             **data['parameters'],
