@@ -8,6 +8,7 @@ from gensim.models.phrases import original_scorer
 from tqdm import tqdm
 import pdb
 from moseq2_nlp.models import DocumentEmbedding
+import pickle
 
 def load_groups(index_file: str, custom_groupings: List[str]) -> Dict[str, str]:
     # Get group names available in model
@@ -128,6 +129,15 @@ def get_embedding_representation(model_file: str, index_file: str, group_map: Di
 
 def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_count):
 
+    '''score_phrases: assigns a score to each bigram in the foreground sequences based on Mikilov et al., 2013
+
+        Positional args:
+            foreground_seqs (list): a list of sequences from which significant phrases are extracted
+            background_seqs (list): a list opf sequences against which the foreground sequences are compared for discriminating phrases
+            foreground_bigrams (list): a list of precomputed bigrams in the foreground sequences
+            min_count (int): minimum number of times a phrase has to appear to be considered for significance
+    '''
+    
     # Unique elements in foreground seqs
     unique_foreground_els = []
     for el in foreground_seqs:
@@ -152,6 +162,16 @@ def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_coun
     return scored_bigrams
 
 def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
+
+    '''make_phrases: makes a dictionary containing disciminating phrases for a given class
+
+        Positional args:
+            foreground_seqs (list): a list of sequences from which significant phrases are extracted
+            background_seqs (list): a list opf sequences against which the foreground sequences are compared for discriminating phrases
+            threshes (list): a list of floating point thresholds which determine which n-gram phrases will be significant for each n
+            n (int): number of times to run the agglomeration algorithm. Running n times will potentially yield up to 2n-grams
+            min_count (int): minimum number of times a phrase has to appear to be considered for significance
+    '''
 
     # Flatten list of sequences into one long sequence (introduces artifacts?)
     flat_foreground_seqs = [el for seq in foreground_seqs for el in seq]
@@ -191,3 +211,38 @@ def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
                     del background_bigrams[ind]
                     flat_background_seqs.insert(ind, bigram)
     return all_phrases
+
+def make_phrases_dataset(model_path, index_path, save_path, threshes, n, min_count):
+
+    '''make_phrases_dataset: makes a dictionary containing disciminating phrases for each class in a dataset
+
+        Positional args:
+            model_path (str): path of .p model file
+            index_path (str): path of .yaml index file
+            save_path (str): path for saving pickled dictionary of phrases
+            threshes (list): a list of floating point thresholds which determine which n-gram phrases will be significant for each n
+            n (int): number of times to run the agglomeration algorithm. Running n times will potentially yield up to 2n-grams
+            min_count (int): minimum number of times a phrase has to appear to be considered for significance
+            '''
+    # Load raw data
+    sequences, out_groups = get_raw_data(model_path, index_path)
+
+    # Get group names
+    unique_groups = []
+    for group in out_groups:
+        if group not in unique_groups:
+            unique_groups.append(group)
+    
+    all_group_phrases = {}
+
+    # For each group
+    for group in unique_groups:
+
+        # Compare group to other groups (including itself)
+        foreground_seqs = [seq for s, seq in enumerate(sequences) if out_groups[s] == group]
+        background_seqs = sequences
+        all_group_phrases[group] = make_phrases(foreground_seqs, background_seqs, threshes, n, min_count)
+
+    # Save
+    with open(save_path, 'wb') as handle:
+        pickle.dump(all_group_phrases, handle, protocol=pickle.HIGHEST_PROTOCOL)

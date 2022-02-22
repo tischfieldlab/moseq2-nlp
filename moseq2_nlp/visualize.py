@@ -1,24 +1,89 @@
 import numpy as np
-import pdb
-from sklearn.decomposition import PCA
-import matplotlib
-matplotlib.use('Agg')
+from PIL import Image
+from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
+import pickle
+from collections import ChainMap
 import matplotlib.pyplot as plt
-plt.ioff()
-plt.style.use('ggplot')
-from gensim.models.doc2vec import Doc2Vec
-from models import DocumentEmbedding
+from moseq2_nlp.data import get_raw_data
+from matplotlib.lines import Line2D
+from tqdm import tqdm
+import os
+import pdb
 
-num_syllables = 70
-fn = '/media/data_cifs/matt/abraira_results/tmp/doc2vec'
-model = DocumentEmbedding(dm=2)
-model.load(fn)
-words = model.model0.wv.key_to_index.keys()
-rep = np.array([model.predict_word([word]) for word in words])
-pdb.set_trace()
-pca = PCA(n_components=2)
-result = pca.fit_transform(rep)
-# create a scatter plot of the projection
-plt.scatter(result[:, 0], result[:, 1])
-plt.savefig('/media/data_cifs/matt/tmp.png')
-plt.close()
+class SimpleGroupedColorFunc(object):
+    '''SimpleGroupedColorfunc: class used for making a color dictionary for wordcloud. Taken from wordcloud docs. '''
+    def __init__(self,color_to_words,default_color):
+        self.word_to_color = {word: color for (color, words) in color_to_words.items() for word in words}
+        self.default_color = default_color
+
+    def __call__(self, word, **kwargs):
+        return self.word_to_color.get(word, self.default_color)
+
+def make_wordcloud(phrases_path, save_dir, max_plot=15):
+
+    '''make_wordcloud: takes a dictionary of phrases and turns them into a wordcloud
+    
+       Positional args:
+           phrases_path (str): the location of the phrase dictionary
+           save_dir (str): location of the directory where wordcloud will be saved
+        
+       Keyword args:
+           max_plot (int, default=15): maximum number of phases to plot per class'''
+
+    # Load phrases
+    with open(phrases_path, 'rb') as handle:
+        group_dict = pickle.load(handle)
+
+    all_colors = ['red', 'blue', 'green', 'orange', 'purple', 'grey', 'black', 'pink']
+   
+    legend_elements = []
+
+    full_phrase_dict = {}
+    color_dict = {}
+
+    # For each group dictionary
+    for g, (group, phrase_dict) in enumerate(group_dict.items()):
+
+        scores    = [score for score in phrase_dict.values()]
+        phrases   = [phrase for phrase in phrase_dict.keys()]
+        num_plot = min(len(phrases), max_plot)
+
+        # Get sorted score indices from highest to lowest with associated phrases
+        sorted_scores = np.argsort(scores)[::-1][:num_plot]
+        sorted_keys = [phrases[s] for s in sorted_scores]
+
+        # Disambiguate keys in full phrase dictionary
+        for k, key in enumerate(sorted_keys):
+            if key in full_phrase_dict.keys():
+                sorted_keys[k] = key + 'a'
+
+        # Add new entries to full dictionary
+        for (k,s) in zip(sorted_keys, sorted_scores):
+            full_phrase_dict[k] = scores[s]
+
+        # Choose color and update legend elements
+        color = all_colors[g]
+        color_dict[color] = sorted_keys
+        if len(sorted_keys) > 0:
+            legend_elements.append(Line2D([0], [0], color=color, lw=4, label=group))
+
+    # Make wordcloud and recolor
+    wordcloud = WordCloud(background_color='white', width=800, height=400).generate_from_frequencies(full_phrase_dict)
+    grouped_color_func = SimpleGroupedColorFunc(color_dict, 'grey')
+    wordcloud.recolor(color_func = grouped_color_func)
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(12,6))
+
+    # Shrink current axis by 20%
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * .7, box.height])
+
+    # Put a legend to the right of the current axis
+    ax.legend(handles=legend_elements, loc='center left', bbox_to_anchor=(1.,.5))
+    ax.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+
+    # Save
+    plt.savefig(os.path.join(save_dir, 'wordcloud.pdf'))
+    plt.close()

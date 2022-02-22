@@ -13,7 +13,8 @@ from moseq2_nlp.gridsearch import (find_gridsearch_results, generate_grid_search
 from moseq2_nlp.utils import (IntChoice, command_with_config, ensure_dir,
                               get_command_defaults, write_yaml)
 
-from moseq2_nlp.data import get_raw_data
+from moseq2_nlp.data import get_raw_data, make_phrases_dataset
+from moseq2_nlp.visualize import make_wordcloud
 from tqdm import tqdm
 
 # Here we will monkey-patch click Option __init__
@@ -114,6 +115,23 @@ def make_random_documents(model_path, index_path, splits, min_length, max_length
     
     print(f'Successfully generated random train/test documents at "{save_dir}".')
 
+@cli.command(name='make-phrases', help='finds and saves compound modules')
+@click.argument('model-path', type=click.Path(exists=True))
+@click.argument('index-path', type=click.Path(exists=True))
+@click.option('--save-path', type=click.Path(), default='./all_phrases.pickle')
+@click.option('--threshes', type=float, multiple=True, default=[.01,.01])
+@click.option('--n', type=int, default=2)
+@click.option('--min-count', type=int, default=2)
+@click.option('--visualize', is_flag=True)
+@click.option('--wordcloud-path', type=click.Path(), default='.')
+@click.option('--max-plot', type=int, default=15)
+def make_phrases(model_path, index_path, save_path, wordcloud_path, threshes, n, min_count, visualize, max_plot):
+
+    make_phrases_dataset(model_path, index_path, save_path, threshes, n, min_count)
+    if visualize:
+        print('Making word cloud')
+        make_wordcloud(save_path, wordcloud_path, max_plot=max_plot)
+
 @cli.command(name='grid-search', help='grid search hyperparameters')
 @click.argument("scan_file", type=click.Path(exists=True))
 @click.option('--save-dir', type=click.Path(), default=os.path.join(os.getcwd(), 'worker-configs'), help="Directory to save worker configurations")
@@ -136,8 +154,6 @@ def grid_search(scan_file, save_dir, cluster_type, slurm_partition, slurm_ncpus,
     save_dir = ensure_dir(save_dir)
     write_jobs(worker_dicts, cluster_wrap, save_dir)
     sys.stderr.write(f'{len(worker_dicts)} jobs written to {save_dir}\n')
-
-
 
 @cli.command(name="generate-gridsearch-config", help="Generates a configuration file that holds editable options for gridsearching hyperparameters.")
 @click.option('--output-file', '-o', type=click.Path(), default='gridsearch-config.yaml')

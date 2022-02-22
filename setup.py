@@ -19,6 +19,7 @@ setup(
         'click',
         'ruamel.yaml',
         'moseq2-viz' # @ git+https://github.com/tischfieldlab/moseq2-viz.git@master'
+        'wordcloud'
     ],
     entry_points={'console_scripts': ['moseq2-nlp = moseq2_nlp.cli:cli']}
 )
