@@ -34,15 +34,21 @@ def make_wordcloud(phrases_path, save_dir, max_plot=15):
     with open(phrases_path, 'rb') as handle:
         group_dict = pickle.load(handle)
 
-    all_colors = ['red', 'blue', 'green', 'orange', 'purple', 'grey', 'black', 'pink']
+    all_colors = ['red', 'blue', 'green', 'orange', 'purple', 'grey', 'black', 'pink', 'forestgreen', 'cornflower', 'magenta', 'cyan']
    
     legend_elements = []
 
     full_phrase_dict = {}
     color_dict = {}
 
+    my_flag = False
+
+    for key in group_dict.keys():
+        if 'WC' in key:
+            my_flag = True
+
     # For each group dictionary
-    for g, (group, phrase_dict) in enumerate(group_dict.items()):
+    for g, (group, (phrase_dict, _)) in enumerate(group_dict.items()):
 
         scores    = [score for score in phrase_dict.values()]
         phrases   = [phrase for phrase in phrase_dict.keys()]
@@ -54,8 +60,15 @@ def make_wordcloud(phrases_path, save_dir, max_plot=15):
 
         # Disambiguate keys in full phrase dictionary
         for k, key in enumerate(sorted_keys):
-            if key in full_phrase_dict.keys():
-                sorted_keys[k] = key + 'a'
+            base_key = key.split(' ')[0]
+            full_phrase_keys = [k1 for k1 in full_phrase_dict.keys()]
+            full_base_keys = [ky2.split(' ')[0] for ky2 in full_phrase_keys]
+            if base_key in full_base_keys:
+                num_stars = 0
+                for f, fb_key in enumerate(full_base_keys):
+                    if fb_key == base_key:
+                        num_stars = max(num_stars, len(full_phrase_keys[f].split(' ')))
+                sorted_keys[k] = key + ''.join([' ' for _ in range(num_stars)])
 
         # Add new entries to full dictionary
         for (k,s) in zip(sorted_keys, sorted_scores):
@@ -68,6 +81,11 @@ def make_wordcloud(phrases_path, save_dir, max_plot=15):
             legend_elements.append(Line2D([0], [0], color=color, lw=4, label=group))
 
     # Make wordcloud and recolor
+
+    if len(legend_elements) == 0:
+        print('No phrases!')
+        return
+  
     wordcloud = WordCloud(background_color='white', width=800, height=400).generate_from_frequencies(full_phrase_dict)
     grouped_color_func = SimpleGroupedColorFunc(color_dict, 'grey')
     wordcloud.recolor(color_func = grouped_color_func)

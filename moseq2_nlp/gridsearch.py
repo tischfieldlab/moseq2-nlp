@@ -38,7 +38,7 @@ class CommandWrapper(Protocol):
     def __call__(self, cmd: str, output: str=None, **kwds: Any) -> str: ...
 
 
-def wrap_command_with_slurm(cmd: str, partition: str, ncpus: int, memory: str, wall_time: str, output: str=None) -> str:
+def wrap_command_with_slurm(cmd: str, env: str, ncpus: int, memory: str, wall_time: str, killable: bool, output: str=None) -> str:
     ''' Wraps a command to be run as a SLURM sbatch job
 
     Parameters:
@@ -52,12 +52,13 @@ def wrap_command_with_slurm(cmd: str, partition: str, ncpus: int, memory: str, w
     Returns:
         (str): the slurm wrapped command
     '''
-    preamble = f'sbatch --partition {partition} --nodes 1 --ntasks-per-node 1 --cpus-per-task {ncpus} --mem {memory} --time {wall_time}'
+    env_preamble = f'. ~/.bashrc; conda activate /cs/usr/ricci/anaconda3/envs/{env};'
+    killable_str = '--killable' if killable else ''
+    preamble = f'sbatch --mem={memory} -c{ncpus} --mem {memory} --time={wall_time} {killable_str}'
     if output is not None:
         preamble += f' --output "{output}"'
     escaped_cmd = cmd.replace('"', r'\"')
-    return f'{preamble} --wrap "{escaped_cmd}";'
-
+    return f'{preamble} --wrap "{env_preamble} {escaped_cmd}";'
 
 def wrap_command_with_local(cmd: str, output: str=None) -> str:
     ''' Wraps a command to be run locally. Admittedly, this does not do too much
@@ -223,6 +224,15 @@ def find_gridsearch_results(path: str) -> pd.DataFrame:
     return pd.DataFrame(exp_data)
 
 
-#def decide_best_model(data: pd.DataFrame, key='best_accuracy'):
-#    pass
+def get_best_model(path:str, key='best_accuracy'):
+    '''Finds and returns the best model according to a particular measure
+    
+    Parameters: 
+        path (str): path to search for experiments
+        key (sr): measure by which to rank experiments'''
 
+    df = find_gridsearch_results(path).sort_values(key, asecending=False)
+    return df.iloc[0]
+
+#def observe_gs_variation(pat: str, ind_var: str, dep_var: str, reduce='mean'):
+#    pass

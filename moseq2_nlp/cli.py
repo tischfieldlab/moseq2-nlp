@@ -134,20 +134,21 @@ def make_phrases(model_path, index_path, save_path, wordcloud_path, threshes, n,
 
 @cli.command(name='grid-search', help='grid search hyperparameters')
 @click.argument("scan_file", type=click.Path(exists=True))
+@click.option('--env', type=str, default='moseq2-nlp', help="Environment in which to run jobs")
 @click.option('--save-dir', type=click.Path(), default=os.path.join(os.getcwd(), 'worker-configs'), help="Directory to save worker configurations")
 @click.option('--cluster-type', default='local', type=click.Choice(['local', 'slurm']))
-@click.option('--slurm-partition', type=str, default='main', help="Partition on which to run jobs. Only for SLURM")
 @click.option('--slurm-ncpus', type=int, default=1, help="Number of CPUs per job. Only for SLURM")
 @click.option('--slurm-memory', type=str, default="2GB", help="Amount of memory per job. Only for SLURM")
 @click.option('--slurm-wall-time', type=str, default='6:00:00', help="Max wall time per job. Only for SLURM")
-def grid_search(scan_file, save_dir, cluster_type, slurm_partition, slurm_ncpus, slurm_memory, slurm_wall_time):
+@click.option('--slurm-killable', is_flag=True)
+def grid_search(scan_file, env, save_dir, cluster_type, slurm_ncpus, slurm_memory, slurm_wall_time, slurm_killable):
 
     worker_dicts = generate_grid_search_worker_params(scan_file)
 
     if cluster_type == 'local':
         cluster_wrap = wrap_command_with_local
     elif cluster_type == 'slurm':
-        cluster_wrap = partial(wrap_command_with_slurm, partition=slurm_partition, ncpus=slurm_ncpus, memory=slurm_memory, wall_time=slurm_wall_time)
+        cluster_wrap = partial(wrap_command_with_slurm, env=env, ncpus=slurm_ncpus, memory=slurm_memory, wall_time=slurm_wall_time, killable=slurm_killable)
     else:
         raise ValueError(f'Unsupported cluster-type {cluster_type}')
 
@@ -168,19 +169,16 @@ def generate_gridsearch_config(output_file):
     write_yaml(output_file, params)
     print(f'Successfully generated gridsearch config file at "{output_file}".')
 
-
-
 @cli.command(name="aggregate-gridsearch-results", help="Aggregate Gridsearch results.")
-@click.argument("results_directory", type=click.Path(exists=True))
-def aggregate_gridsearch_results(results_directory):
+@click.argument("results-directory", type=click.Path(exists=True))
+@click.option("--best-key", type=str, default='best_accuracy')
+def aggregate_gridsearch_results(results_directory, best_key):
     
-    
-    results = find_gridsearch_results(results_directory)
+    results = find_gridsearch_results(results_directory).sort_values(best_key, ascending=False)
     results.to_csv(os.path.join(results_directory, 'gridsearch-aggregate-results.tsv'), sep='\t', index=False)
 
-
-
-
+    print('Best model:')
+    print(results.iloc[0])
 
 if __name__ == '__main__':
     cli()
