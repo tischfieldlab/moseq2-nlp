@@ -120,3 +120,6 @@ venv.bak/
 
 #VS Code
 .vscode/
+
+# vi swp file
+*.swp
