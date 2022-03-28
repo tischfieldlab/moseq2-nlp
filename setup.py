@@ -9,7 +9,7 @@ setup(
     #platforms=['mac', 'unix'],
     python_requires='>=3.6',
     install_requires=[
-        'numpy==1.19.2',
+        'numpy>=1.21',
         'tqdm',
         'notebook',
         'gensim==4.0.1',
