@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, Optional
 
 import numpy as np
 from moseq2_viz.model.util import (get_syllable_statistics,
@@ -134,7 +134,45 @@ def get_transition_representation(model_file: str, index_file: str, group_map: D
     truncated_tm_vals = tm_vals_array[:,top_transitions]
 
     return out_groups, truncated_tm_vals
+    
+def get_transition_representations_n(model_file : str, index_file: str, n: int,
+                     num_transitions: Optional[list] = None,
+                     max_syllable: int=100, emissions: bool=True, 
+                     bad_syllables: List[int]=[-5],
+                     ablation: str='none',
+                     phrase_path: str=None):
+                     
+    '''get_transition_representations_n: calculate n-length transition probabilities. '''
+    
+    print('Loading raw data')
+    sentences, out_groups = get_raw_data(model_file, index_file, max_syllable=max_syllable)
+    
+    # Associate all syllables to their respective groups in a dictionary
+    unique_groups = []
+    for group in out_groups:
+        if group not in unique_groups:
+            unique_groups.append(group)
+        
+    group_dict = {group: [] for group in unique_groups}
+    for g, group in enumerate(out_groups):
+        group_dict[group] += sentences[g]
+    
+    # Initialize group transition matrices
+    group_transition_arrays = {group: np.zeros(n*(max_syllable,)) for group in unique_groups}
+    
+    # Calculate n-transitions
+    for (group, syllables) in group_dict.items():
+        print(f'Getting {n}-grams for {group}.')
+        num_syllables = len(syllables)
+        for i in tqdm(range(num_syllables-n)):
+            ngram = [int(s) for s in syllables[i:i+n]]
+            ind=[slice(l,l+1,1) for l in ngram]
+            group_transition_arrays[group][ind] += 1
+        # Normalize (if transition never occured, have to be careful and not normalize by 0)
+        nm = np.maximum(np.ones_like(group_transition_arrays[group]), group_transition_arrays[group].sum(n-1,keepdims=True))
+        group_transition_arrays[group] /= nm
 
+    return group_transition_arrays
 
 def get_embedding_representation(model_file: str, index_file: str, group_map: Dict[str, str], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, model_dest: str, ablation: str, phrase_path: str):
 
@@ -145,6 +183,36 @@ def get_embedding_representation(model_file: str, index_file: str, group_map: Di
     doc_embedding.save(model_dest)
 
     return out_groups, rep
+    
+def sample_markov_chain(tmx, num_syllables):
+    '''sample_markov_chain: using transition matrix `tmx`, sample from a markov chain `num_syllables` times'''
+    n = tmx.ndim
+
+    # Initialize on a possible state
+    didnt_happen = True
+    while didnt_happen:
+        history_length = max(n-1,1)
+        init = [str(np.random.randint(100)) for _ in range(history_length)]
+        ind=[slice(int(l),int(l)+1,1) for l in init]
+        probs = np.squeeze(tmx[ind])
+        if probs.sum() > 0:
+            didnt_happen=False
+    synth_syllables = init.copy()
+
+    # Sample data
+    for _ in range(num_syllables - (n-1)):
+        if n > 1:
+            current = synth_syllables[(-n + 1):]
+            ind=[slice(int(l),int(l)+1,1) for l in current]
+            probs = np.squeeze(tmx[ind])
+            # If you end up a state with all probs 0, sample uniform
+            effective_probs = .01*np.ones(100) if sum(probs) == 0 else probs
+        else:
+            effective_probs = tmx
+        new = np.where(np.random.multinomial(1, effective_probs))[0]
+        synth_syllables.append(str(new.item()))
+        
+    return synth_syllables
 
 def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_count):
 
