@@ -17,6 +17,7 @@ setup(
         'scikit_learn==0.24.2',
         'h5py',
         'click',
+        'click-option-group',
         'ruamel.yaml',
         'moseq2-viz', # @ git+https://github.com/tischfieldlab/moseq2-viz.git@master'
         'wordcloud',
