@@ -7,7 +7,7 @@ setup(
     version='0.1.0',
     packages=find_packages(),
     #platforms=['mac', 'unix'],
-    python_requires='>=3.6',
+    python_requires='>=3.8',
     install_requires=[
         'numpy>=1.21',
         'tqdm',
@@ -21,5 +21,12 @@ setup(
         'moseq2-viz', # @ git+https://github.com/tischfieldlab/moseq2-viz.git@master'
         'wordcloud'
     ],
+    extras_require={
+        'dev': [
+            'pytest',
+            'pytest-pep8',
+            'pytest-cov'
+        ]
+    },
     entry_points={'console_scripts': ['moseq2-nlp = moseq2_nlp.cli:cli']}
 )
