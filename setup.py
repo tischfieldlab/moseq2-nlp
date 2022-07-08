@@ -19,7 +19,8 @@ setup(
         'click',
         'ruamel.yaml',
         'moseq2-viz', # @ git+https://github.com/tischfieldlab/moseq2-viz.git@master'
-        'wordcloud'
+        'wordcloud',
+        'eli5'
     ],
     extras_require={
         'dev': [
