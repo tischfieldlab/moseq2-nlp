@@ -110,7 +110,7 @@ def train_svm(features, labels, kernel: str, K: int, scoring: str, penalty: Pena
     
     Cs = np.logspace(-5, 5, num_c)
     kf = n_splits=int(len(labels) / float(K))
-    all_scores = []
+    all_scores_list = []
 
     params = {
         'kernel': kernel,
@@ -128,8 +128,9 @@ def train_svm(features, labels, kernel: str, K: int, scoring: str, penalty: Pena
 
         clf = SVC(**params)
         scores = cross_val_score(clf, features, labels, cv=kf, scoring=scoring)
-        all_scores.append(scores)
-    all_scores = np.array(all_scores) # nm_C x nm_classes
+        all_scores_list.append(scores)
+
+    all_scores = np.array(all_scores_list) # nm_C x nm_classes
     best_C_ind = np.argmax(all_scores.mean(1))
     best_C     = Cs[best_C_ind]
     best_score = all_scores[best_C_ind].mean()
