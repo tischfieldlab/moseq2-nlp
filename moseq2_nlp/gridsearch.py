@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from moseq2_nlp.utils import ensure_dir, read_yaml, write_yaml
+import matplotlib.pyplot as plt
 import pdb
 
 
@@ -231,8 +232,19 @@ def get_best_model(path:str, key='best_accuracy'):
         path (str): path to search for experiments
         key (sr): measure by which to rank experiments'''
 
-    df = find_gridsearch_results(path).sort_values(key, asecending=False)
+    df = find_gridsearch_results(path).sort_values(key, ascending=False)
     return df.iloc[0]
 
-#def observe_gs_variation(pat: str, ind_var: str, dep_var: str, reduce='mean'):
-#    pass
+def observe_gs_variation(path: str, representation_name: str, dep_var_name: str, ind_var_name: str):
+    df = find_gridsearch_results(path)
+    current_df = df.loc[df['representation'] == representation_name]
+    dep_var = current_df[dep_var_name].values
+    ind_var = current_df[ind_var_name]
+
+    fig, ax = plt.subplots(figsize=(12,6))
+    ax.scatter(ind_var, dep_var)
+    ax.set_title(f'{ind_var_name}, vs {dep_var_name}. Rep: {representation_name}')
+    ax.set_xlabel(ind_var_name)
+    ax.set_ylabel(dep_var_name)
+    plt.show()
+    plt.close()
