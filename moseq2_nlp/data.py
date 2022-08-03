@@ -45,7 +45,7 @@ def get_raw_data(model_file: str, index_file: str, max_syllable: int=100, emissi
     label_group = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
 
     sentences = []
-    out_groups = []
+    out_groups: List[str] = []
     for l, g in zip(tqdm(model['labels']), label_group):
         l = list(filter(lambda a: a not in bad_syllables, l))
         np_l = np.array(l)
@@ -63,8 +63,12 @@ def get_raw_data(model_file: str, index_file: str, max_syllable: int=100, emissi
             raise ValueError('Ablation only works with emission data!')
 
         # Load phrases for each group
-        with open(phrase_path, 'rb') as handle:
-            group_dict = pickle.load(handle)
+        if phrase_path is not None:
+            with open(phrase_path, 'rb') as handle:
+                group_dict = pickle.load(handle)
+
+        else:
+            raise ValueError('Expected a `phrase_path` str, but got `None`!')
 
         # For each group, phrase_dict and proportion of deleted syllables
         for g, (group, (phrase_dict, prop)) in enumerate(group_dict.items()):
@@ -174,7 +178,7 @@ def get_transition_representations_n(model_file : str, index_file: str, n: int,
 
     return tm_array, out_groups
 
-def get_embedding_representation(model_file: str, index_file: str, group_map: Dict[str, str], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, model_dest: str, ablation: str, phrase_path: str):
+def get_embedding_representation(model_file: str, index_file: str, group_map: Dict[str, str], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, model_dest: str, ablation: str, phrase_path: str=None):
 
     sentences, out_groups = get_raw_data(model_file, index_file, max_syllable=100, emissions=emissions, bad_syllables=bad_syllables, ablation=ablation, phrase_path=phrase_path)
 

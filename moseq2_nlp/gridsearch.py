@@ -39,27 +39,53 @@ class CommandWrapper(Protocol):
     def __call__(self, cmd: str, output: str=None, **kwds: Any) -> str: ...
 
 
-def wrap_command_with_slurm(cmd: str, env: str, ncpus: int, memory: str, wall_time: str, killable: bool, output: str=None) -> str:
+def wrap_command_with_slurm(cmd: str, preamble: str, partition: str, ncpus: int, memory: str, wall_time: str, extra_params: str, output: str=None) -> str:
     ''' Wraps a command to be run as a SLURM sbatch job
 
     Parameters:
         cmd (str): Command to be wrapped
+        preamble (str): Commands to be run prior to `cmd` as part of this job
         partition (str): Partition on which to run this job
         ncpus (int): Number of CPU cores to allocate to this job
         memory (str): Amount of memory to allocate to this job. ex: "2GB"
         wall_time (str): Amount of wall time allocated to this job. ex: "1:00:00"
+        extra_params (str): Extra parameters to pass to slurm sbatch command
         output (str): Path of file to write output to
 
     Returns:
         (str): the slurm wrapped command
     '''
-    env_preamble = f'. ~/.bashrc; conda activate /cs/usr/ricci/anaconda3/envs/{env};'
-    killable_str = '--killable' if killable else ''
-    preamble = f'sbatch --mem={memory} -c{ncpus} --mem {memory} --time={wall_time} {killable_str}'
+    # setup basic parameters for slurm's `sbatch` command:
+    #   important to set --nodes to 1 and --ntasks-per-node to one 1 or
+    #   the multiple --cpus-per-task may be split over multiple nodes!
+    sbatch_cmd = f'sbatch --partition {partition} --nodes 1 --ntasks-per-node 1 --cpus-per-task {ncpus} --mem {memory} --time {wall_time}'
+
+    # if the user requests job log output to a file, set that up
     if output is not None:
-        preamble += f' --output "{output}"'
+        sbatch_cmd += f' --output "{output}"'
+
+    # if any extra params for slurm, add them
+    if len(extra_params) > 0:
+        sbatch_cmd += f' {extra_params}'
+
+    if len(preamble) > 0:
+        # if preamble does not end with semicolon, add one to separate from main command
+        if not preamble.endswith(';'):
+            preamble = preamble + '; '
+
+        # ensure there is a space separating preamble from main command
+        if not preamble.endswith(' '):
+            preamble = preamble + ' '
+
+        # escape any quotes within the preamble
+        preamble = preamble.replace('"', r'\"')
+
+    # escape any quotes in the command
     escaped_cmd = cmd.replace('"', r'\"')
-    return f'{preamble} --wrap "{env_preamble} {escaped_cmd}";'
+
+    # put it all togher and return the final wrapped command
+    return f'{sbatch_cmd} --wrap "{preamble}{escaped_cmd}";'
+
 
 def wrap_command_with_local(cmd: str, output: str=None) -> str:
     ''' Wraps a command to be run locally. Admittedly, this does not do too much
