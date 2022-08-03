@@ -104,7 +104,7 @@ def train_regressor(features, labels, K: int, scoring: str, penalty: Penalty, nu
     best_score = np.max(scores.mean((0,1)))
     best_C     = Cs[np.argmax(scores.mean((0,1)))]
 
-    return best_C, best_score
+    return best_C, scores
 
 def train_svm(features, labels, kernel: str, K: int, scoring: str, penalty: Penalty, num_c: int, seed: int):
     

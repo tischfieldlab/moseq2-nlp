@@ -6,6 +6,8 @@ from collections import ChainMap
 import matplotlib.pyplot as plt
 from moseq2_nlp.data import get_raw_data
 from matplotlib.lines import Line2D
+import matplotlib
+#matplotlib.rc('font', 'Arial')
 from tqdm import tqdm
 import os
 import pdb
@@ -50,6 +52,9 @@ def make_wordcloud(phrases_path, save_dir, max_plot=15):
     # For each group dictionary
     for g, (group, (phrase_dict, _)) in enumerate(group_dict.items()):
 
+        if '_F' in group:
+            continue
+
         scores    = [score for score in phrase_dict.values()]
         phrases   = [phrase for phrase in phrase_dict.keys()]
         num_plot = min(len(phrases), max_plot)
@@ -72,21 +77,26 @@ def make_wordcloud(phrases_path, save_dir, max_plot=15):
 
         # Add new entries to full dictionary
         for (k,s) in zip(sorted_keys, sorted_scores):
+            #k = k.replace('>',u'\u2192')
+            #k = k.replace('>','→')
             full_phrase_dict[k] = scores[s]
 
         # Choose color and update legend elements
-        color = all_colors[g]
+        #color = all_colors[g]
+        if 'Control' in group:
+            color = 'red'
+        else:
+            color = 'forestgreen'
         color_dict[color] = sorted_keys
         if len(sorted_keys) > 0:
             legend_elements.append(Line2D([0], [0], color=color, lw=4, label=group))
-
     # Make wordcloud and recolor
 
     if len(legend_elements) == 0:
         print('No phrases!')
         return
-  
-    wordcloud = WordCloud(background_color='white', width=800, height=400).generate_from_frequencies(full_phrase_dict)
+      
+    wordcloud = WordCloud(background_color='white', width=800, height=400, regexp=r"[a-zA-Z\u2192]+").generate_from_frequencies(full_phrase_dict)
     grouped_color_func = SimpleGroupedColorFunc(color_dict, 'grey')
     wordcloud.recolor(color_func = grouped_color_func)
 

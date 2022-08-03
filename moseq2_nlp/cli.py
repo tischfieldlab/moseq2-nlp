@@ -127,7 +127,7 @@ def make_random_documents(model_path, index_path, splits, min_length, max_length
 @click.option('--max-plot', type=int, default=15)
 def make_phrases(model_path, index_path, save_path, wordcloud_path, threshes, n, min_count, visualize, max_plot):
 
-    make_phrases_dataset(model_path, index_path, save_path, threshes, n, min_count)
+    #make_phrases_dataset(model_path, index_path, save_path, threshes, n, min_count)
     if visualize:
         print('Making word cloud')
         make_wordcloud(save_path, wordcloud_path, max_plot=max_plot)

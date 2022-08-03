@@ -3,7 +3,7 @@ import os
 from moseq2_nlp.visualize import make_wordcloud
 from moseq2_nlp.data import make_phrases_dataset
 
-threshes = [.05,.05,.05]
+threshes = [.01,.01,.01]
 n = 3
 min_count = 3
 visualize=True
