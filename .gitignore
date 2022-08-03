@@ -6,6 +6,7 @@ __pycache__/
 .ycm_extra_conf.py
 .idea/
 moseq2_nlp.egg-info
+./make_tourette_wordclouds.py
 
 #test data outputs
 tests/data/
