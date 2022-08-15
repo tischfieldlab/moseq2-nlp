@@ -16,7 +16,10 @@ from moseq2_nlp.gridsearch import (find_gridsearch_results,
                                    wrap_command_with_slurm, write_jobs)
 from moseq2_nlp.utils import (IntChoice, command_with_config, ensure_dir,
                               get_command_defaults, write_yaml)
+from moseq2_viz.util import parse_index
+from moseq2_viz.model.util import parse_model_results
 from moseq2_nlp.visualize import make_wordcloud
+import pdb
 
 # Here we will monkey-patch click Option __init__
 # in order to force showing default values for all options
@@ -35,12 +38,12 @@ click.core.Option.__init__ = new_init # type: ignore
 def cli():
     pass
 
-
 @cli.command(name='train', cls=command_with_config('config_file'), help='train a classifier')
 @click.option('--name', type=str)
 @click.option('--save-dir', type=str, default=os.getcwd())
 @click.option('--model-path', type=click.Path(exists=True))
 @click.option('--index-path', type=click.Path(exists=True))
+@click.option('--train-inds', type=list, default=[])
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
 @click.option('--classifier', type=click.Choice(['logistic_regression', 'svm']), default='logistic_regression')
 @click.option('--kernel', type=click.Choice(['linear', 'poly', 'rbf', 'sigmoid']), default='rbf')
@@ -54,17 +57,22 @@ def cli():
 @click.option('--embedding-window', type=int, default=4)
 @click.option('--embedding-epochs', type=int, default=250)
 @click.option('--bad-syllables', type=int, multiple=True, default=[-5])
-@click.option('--scoring', type=str, default='accuracy')
 @click.option('--k', type=int, default=1)
 @click.option('--penalty', default='l2', type=click.Choice(['l1', 'l2', 'elasticnet']))
 @click.option('--num-c', type=int, default=11)
+@click.option('--multi_class', default='ovr', type=click.Choice(['ovr', 'auto', 'multinomial']))
 @click.option('--seed', type=int, default=0)
 @click.option('--config-file', type=click.Path())
-def train(name, save_dir, model_path, index_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
-          embedding_epochs, bad_syllables, scoring, k, penalty, num_c, kernel, seed, config_file):
-
-    trainer.train(name, save_dir, model_path, index_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
-          embedding_epochs, bad_syllables, scoring, k, penalty, num_c, kernel, seed)
+def train(name, save_dir, model_path, index_path, train_inds, representation, classifier, kernel, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
+          embedding_epochs, bad_syllables, k, penalty, num_c, multi_class, seed, config_file):
+    # If training indices not specified, take first 80% of animals
+    if len(train_inds) == 0:
+        _, sorted_index = parse_index(index_path)
+        model = parse_model_results(model_path)
+        num_animals = len(model['keys'])
+        train_inds = [i for i in range(int(.8*num_animals))]
+    trainer.train(name, save_dir, model_path, index_path, train_inds, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
+          embedding_epochs, bad_syllables, k, penalty, num_c, multi_class, kernel, seed)
 
 
 @cli.command(name="generate-train-config", help="Generates a configuration file that holds editable options for training parameters.")
