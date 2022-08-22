@@ -5,7 +5,7 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 
 class DocumentEmbedding(object):
-    def __init__(self, dm: Literal[0, 1, 2]=0, embedding_dim: int=256, embedding_window: int=5, embedding_epochs: int=50, min_count: int=5):
+    def __init__(self, dm: Literal[0, 1, 2]=0, embedding_dim: int=256, embedding_window: int=5, embedding_epochs: int=50, min_count: int=5, seed: int=0):
         ''' Create a document emedding with some parameters
 
         Parameters:
@@ -20,6 +20,7 @@ class DocumentEmbedding(object):
         self.embedding_epochs = embedding_epochs
         self.embedding_window = embedding_window
         self.min_count = min_count
+        self.seed = seed
 
     def fit(self, sentences: List[List[str]]) -> None:
         ''' Fit a model to some data.
@@ -29,10 +30,10 @@ class DocumentEmbedding(object):
         '''
         documents = [TaggedDocument(sent, [i]) for i, sent in enumerate(sentences)]
         if self.dm < 2 and self.dm >=0:
-            self.model = Doc2Vec(documents, dm=self.dm, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1)
+            self.model = Doc2Vec(documents, dm=self.dm, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1, seed=self.seed)
         elif self.dm == 2:
-            self.model0 = Doc2Vec(documents, dm=0, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1, dbow_words=0)
-            self.model1 = Doc2Vec(documents, dm=1, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1)
+            self.model0 = Doc2Vec(documents, dm=0, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1, dbow_words=0, seed=self.seed)
+            self.model1 = Doc2Vec(documents, dm=1, epochs=self.embedding_epochs, vector_size=self.embedding_dim, window=self.embedding_window, min_count=self.min_count, workers=1, seed=self.seed)
         else:
             raise ValueError('Distributed memory value not valid. Accepted values are dm=0,1,2.')
 

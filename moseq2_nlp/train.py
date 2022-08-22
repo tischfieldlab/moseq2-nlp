@@ -38,7 +38,7 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, train_inds
     if representation == 'embeddings':
         labels, features = get_embedding_representation(model_path, index_path, group_map, emissions=emissions, bad_syllables=bad_syllables,
                             dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count,
-                            model_dest=os.path.join(exp_dir, 'doc2vec'), ablation='none', phrase_path=None)
+                            model_dest=os.path.join(exp_dir, 'doc2vec'), ablation='none', phrase_path=None, seed=seed)
 
     elif representation == 'usages':
         labels, features = get_usage_representation(model_path, index_path, group_map, num_syllables)

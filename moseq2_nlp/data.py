@@ -178,11 +178,11 @@ def get_transition_representations_n(model_file : str, index_file: str, n: int,
 
     return tm_array, out_groups
 
-def get_embedding_representation(model_file: str, index_file: str, group_map: Dict[str, str], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, model_dest: str, ablation: str, phrase_path: str=None):
+def get_embedding_representation(model_file: str, index_file: str, group_map: Dict[str, str], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, model_dest: str, ablation: str, phrase_path: str=None, seed=0):
 
     sentences, out_groups = get_raw_data(model_file, index_file, max_syllable=100, emissions=emissions, bad_syllables=bad_syllables, ablation=ablation, phrase_path=phrase_path)
 
-    doc_embedding = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count)
+    doc_embedding = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count, seed=seed)
     rep = np.array(doc_embedding.fit_predict(sentences))
     doc_embedding.save(model_dest)
 
