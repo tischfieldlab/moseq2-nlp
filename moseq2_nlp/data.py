@@ -1,5 +1,5 @@
 from typing import Dict, List, Literal, Optional
-
+from pomegranate import DiscreteDistribution, MarkovChain
 import numpy as np
 from moseq2_viz.model.util import (get_syllable_statistics,
                                    get_transition_matrix, parse_model_results)
@@ -115,7 +115,6 @@ def get_usage_representation(model_file: str, index_file: str, group_map: Dict[s
             total_u = np.sum(u_vals)
             usage_vals.append(np.array(u_vals) / total_u)
             out_groups.append(group_map[g])
-
     return out_groups, np.array(usage_vals)
 
 
@@ -188,36 +187,19 @@ def get_embedding_representation(model_file: str, index_file: str, group_map: Di
 
     return out_groups, rep
     
-def sample_markov_chain(tmx, num_syllables):
+def fit_markov_chain(syllables, k, max_syllable=100):
     '''sample_markov_chain: using transition matrix `tmx`, sample from a markov chain `num_syllables` times'''
-    n = tmx.ndim
-    max_syllables = tmx.shape[0]
 
-    # Initialize on a possible state
-    didnt_happen = True
-    while didnt_happen:
-        history_length = max(n-1,1)
-        init = [str(np.random.randint(max_syllables)) for _ in range(history_length)]
-        ind=[slice(int(l),int(l)+1,1) for l in init]
-        probs = np.squeeze(tmx[ind])
-        if probs.sum() > 0:
-            didnt_happen=False
-    synth_syllables = init.copy()
+    syllable_array = np.array([int(s) for s in syllables])
+    u, _ = get_syllable_statistics(syllable_array, max_syllable=max_syllable, count='usage')
+    u_vals = list(u.values())
+    total_u = np.sum(u_vals)
+    usages = np.array(u_vals) / total_u
 
-    # Sample data
-    for _ in range(num_syllables - (n-1)):
-        if n > 1:
-            current = synth_syllables[(-n + 1):]
-            ind=[slice(int(l),int(l)+1,1) for l in current]
-            probs = np.squeeze(tmx[ind])
-            # If you end up a state with all probs 0, sample uniform
-            effective_probs = (1. / max_syllables) * np.ones(max_syllables) if sum(probs) == 0 else probs
-        else:
-            effective_probs = tmx
-        new = np.where(np.random.multinomial(1, effective_probs))[0]
-        synth_syllables.append(str(new.item()))
-        
-    return synth_syllables
+    u_dict = {str(i):usages[i] for i in range(max_syllable)}
+    dist = DiscreteDistribution(u_dict)
+    mc = MarkovChain([dist])
+    return mc.from_samples(''.join(syllables),k)
 
 def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_count):
 
