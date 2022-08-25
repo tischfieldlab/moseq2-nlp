@@ -1,11 +1,11 @@
 import os
 import time
-from typing import List, Literal
+from typing import List, Literal, Union
 
 import numpy as np
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegressionCV
-from sklearn.model_selection import KFold, cross_val_score
+from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.metrics import classification_report
 
 from moseq2_nlp.data import get_embedding_representation, get_transition_representation, get_usage_representation, load_groups
@@ -16,9 +16,9 @@ Representation = Literal['embeddings', 'usages', 'transitions']
 Classifier = Literal['logistic_regression', 'svm']
 Penalty = Literal['l1', 'l2', 'elasticnet']
 
-def train(name: str, save_dir: str, model_path: str, index_path: str, train_inds: list, representation: Representation, classifier: Classifier, emissions: bool, custom_groupings: List[str],
+def train(name: str, save_dir: str, model_path: str, index_path: str, representation: Representation, classifier: Classifier, emissions: bool, custom_groupings: List[str],
           num_syllables: int, num_transitions: int, min_count: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,
-          embedding_epochs: int, bad_syllables: List[int], K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed:int):
+          embedding_epochs: int, bad_syllables: List[int], test_size: float, K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed:int, split_seed:int=None):
 
     np.random.seed(seed)    
 
@@ -50,10 +50,7 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, train_inds
         raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
 
     # Make train/test splits
-    X_train = features[train_inds]
-    X_test  = [feature for f, feature in enumerate(features) if f not in train_inds]
-    y_train = [labels[ind] for ind in train_inds]
-    y_test  = [label for l, label in enumerate(labels) if l not in train_inds]
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
     times['Features'] = time.time() - start
 
     start = time.time()
