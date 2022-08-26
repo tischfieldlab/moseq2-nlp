@@ -5,12 +5,15 @@ from typing import List, Literal, Union
 import numpy as np
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegressionCV
-from sklearn.model_selection import KFold, cross_val_score, train_test_split
+from sklearn.model_selection import KFold, cross_val_score, train_test_split, GridSearchCV
 from sklearn.metrics import classification_report
 
 from moseq2_nlp.data import get_embedding_representation, get_transition_representation, get_usage_representation, load_groups
 from moseq2_nlp.utils import ensure_dir, write_yaml
 import pdb
+
+import warnings
+warnings.filterwarnings("ignore")
 
 Representation = Literal['embeddings', 'usages', 'transitions']
 Classifier = Literal['logistic_regression', 'svm']
@@ -21,7 +24,6 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
           embedding_epochs: int, bad_syllables: List[int], test_size: float, K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed:int, split_seed:int=None):
 
     np.random.seed(seed)    
-
     save_dict = {'parameters': locals()}
     times = {'Preamble': 0.0, 'Data': 0.0, 'Features': 0.0, 'Classifier': 0.0}
 
@@ -51,20 +53,20 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
 
     # Make train/test splits
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
+
     times['Features'] = time.time() - start
 
     start = time.time()
     print('Training classifier')
-    if classifier == 'logistic_regression':
+    if classifier == 'logistic_regressor':
         # Train logistic regressor and CV over C using validation data from the training set.
         clf = train_regressor(X_train, y_train, K, penalty, num_c, seed, multi_class)
-        # TODO: These are Cs per class. But what C is used at test time?
-        #C = clf.C_
-        # Final prediction on test set.
-        y_pred = clf.predict(X_test)
-        report = classification_report(y_test, y_pred)
     elif classifier == 'svm':
-        clf = train_svm(X_train, y_train, kernel, K, scoring, penalty, num_c, seed)
+        clf = train_svm(X_train, y_train, K, penalty, num_c, seed)
+    else:
+        raise ValueError(f'Classifier {classifier} not recognized')
+    y_pred = clf.predict(X_test)
+    report = classification_report(y_test, y_pred)
     
     times['Classifier'] = time.time() - start
 
@@ -96,7 +98,7 @@ def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed
         'class_weight': 'balanced',
         'multi_class': multi_class,
         'refit': True,
-        'scoring': 'f1',
+        'scoring': 'accuracy',
         'tol': 1e-6,
         'max_iter': 2000
     }
@@ -107,37 +109,25 @@ def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed
             'penalty': penalty
         })
 
-    clf = LogisticRegressionCV(**params).fit(features, labels)
+    return LogisticRegressionCV(**params).fit(features, labels)
 
-    return clf
+def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int):
 
-def train_svm(features, labels, kernel: str, K: int, scoring: str, penalty: Penalty, num_c: int, seed: int):
-    
+    min_exemplars = min([len([lb for lb in labels if lb == l]) for l in np.unique(labels)])
     Cs = np.logspace(-5, 5, num_c)
-    kf = n_splits=int(len(labels) / float(K))
-    all_scores_list = []
+    kernels=['rbf','linear']
+    param_grid = {'C':Cs, 'kernel':kernels}
+    kf = min(int(len(labels) / float(K)), min_exemplars)
 
-    params = {
-        'kernel': kernel,
-        'random_state': seed,
+    svc_params = {
         'class_weight': 'balanced',
         'tol': 1e-6,
-        'max_iter': 2000
+        'max_iter': 2000,
+        'probability':True
+    }
+    gs_params = {'cv':kf,
+                 'refit':True,
+                 'scoring':'accuracy'
     }
 
-    for C in Cs:
-        # Load and train classifier
-        params.update({
-            'C': C,
-        })
-
-        clf = SVC(**params)
-        scores = cross_val_score(clf, features, labels, cv=kf, scoring=scoring)
-        all_scores_list.append(scores)
-
-    all_scores = np.array(all_scores_list) # nm_C x nm_classes
-    best_C_ind = np.argmax(all_scores.mean(1))
-    best_C     = Cs[best_C_ind]
-    best_score = all_scores[best_C_ind].mean()
-
-    return best_C, best_score
+    return GridSearchCV(SVC(**svc_params), param_grid,**gs_params).fit(features,labels)

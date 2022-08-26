@@ -54,7 +54,7 @@ def cli():
 @click.option('--embedding-window', type=int, default=4)
 @click.option('--embedding-epochs', type=int, default=250)
 @click.option('--bad-syllables', type=int, multiple=True, default=[-5])
-@click.option('--test-size', type=float, default=.2)
+@click.option('--test-size', type=float, default=.33)
 @click.option('--k', type=int, default=1)
 @click.option('--penalty', default='l2', type=click.Choice(['l1', 'l2', 'elasticnet']))
 @click.option('--num-c', type=int, default=11)
