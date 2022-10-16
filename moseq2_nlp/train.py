@@ -20,15 +20,14 @@ Classifier = Literal['logistic_regression', 'svm']
 Penalty = Literal['l1', 'l2', 'elasticnet']
 
 def train(name: str, save_dir: str, model_path: str, index_path: str, representation: Representation, classifier: Classifier, emissions: bool, custom_groupings: List[str],
-          num_syllables: int, num_transitions: int, min_count: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,
-          embedding_epochs: int, bad_syllables: List[int], test_size: float, K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed:int, split_seed:int=None):
+        num_syllables: int, num_transitions: int, min_count: int, negative: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,
+          embedding_epochs: int, bad_syllables: List[int], test_size: float, K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed:int, split_seed:int=None, verbose:int=0):
 
     np.random.seed(seed)    
-    save_dict = {'parameters': locals()}
+    save_dict = {}
     times = {'Preamble': 0.0, 'Data': 0.0, 'Features': 0.0, 'Classifier': 0.0}
 
     start = time.time()
-
     group_map = load_groups(index_path, custom_groupings)
     bad_syllables = [int(bs) for bs in bad_syllables]
     exp_dir = ensure_dir(os.path.join(save_dir, name))
@@ -39,7 +38,7 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
     print('Getting features')
     if representation == 'embeddings':
         labels, features = get_embedding_representation(model_path, index_path, group_map, emissions=emissions, bad_syllables=bad_syllables,
-                            dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count,
+                            dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count, negative=negative,
                             model_dest=os.path.join(exp_dir, 'doc2vec'), ablation='none', phrase_path=None, seed=seed)
 
     elif representation == 'usages':
@@ -47,9 +46,14 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
 
     elif representation == 'transitions':
         labels, features = get_transition_representation(model_path, index_path, group_map, num_transitions, max_syllable=num_syllables)
-
     else:
         raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
+
+    #TODO:  REMOVE
+    inds = [ind for ind in range(len(labels)) if 'MIA' in labels[ind]]
+    labels = [labels[ind] for ind in inds]
+    features = features[inds]
+
 
     # Make train/test splits
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
@@ -60,29 +64,25 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
     print('Training classifier')
     if classifier == 'logistic_regressor':
         # Train logistic regressor and CV over C using validation data from the training set.
-        clf = train_regressor(X_train, y_train, K, penalty, num_c, seed, multi_class)
+        clf = train_regressor(X_train, y_train, K, penalty, num_c, seed, multi_class, verbose=verbose)
     elif classifier == 'svm':
-        clf = train_svm(X_train, y_train, K, penalty, num_c, seed)
+        clf = train_svm(X_train, y_train, K, penalty, num_c, seed, verbose=verbose)
     else:
         raise ValueError(f'Classifier {classifier} not recognized')
     y_pred = clf.predict(X_test)
-    report = classification_report(y_test, y_pred)
+    report = classification_report(y_test, y_pred, output_dict=True)
     
     times['Classifier'] = time.time() - start
-
-#    print(f'Best C: {C}')
-    print(report)
 
     save_dict['model_performance'] = {
         f'classification_report': report
     }
 
     save_dict['compute_times'] = times
-    write_yaml(os.path.join(exp_dir, 'experiment_info.yaml'), save_dict)
+    write_yaml(os.path.join(exp_dir, 'results.yaml'), save_dict)
+    np.save(os.path.join(exp_dir, 'features.npy'), features)
 
-    #np.save(os.path.join(exp_dir, 'best_C.npy'), C)
-
-def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed: int, multi_class: Literal['auto', 'multi_class', 'ovr']):
+def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed: int, multi_class: Literal['auto', 'multi_class', 'ovr'], verbose: int=0):
     
     Cs = np.logspace(-5, 5, num_c)
     kf = KFold(n_splits=int(len(labels) / float(K)))
@@ -100,7 +100,8 @@ def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed
         'refit': True,
         'scoring': 'accuracy',
         'tol': 1e-6,
-        'max_iter': 2000
+        'max_iter': 2000,
+        'verbose': verbose
     }
     # Load and train classifier
     if penalty != 'none':
@@ -111,7 +112,7 @@ def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed
 
     return LogisticRegressionCV(**params).fit(features, labels)
 
-def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int):
+def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int, verbose: int=0):
 
     min_exemplars = min([len([lb for lb in labels if lb == l]) for l in np.unique(labels)])
     Cs = np.logspace(-5, 5, num_c)
@@ -123,11 +124,13 @@ def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int)
         'class_weight': 'balanced',
         'tol': 1e-6,
         'max_iter': 2000,
-        'probability':True
+        'probability':True,
+        'verbose': verbose
     }
     gs_params = {'cv':kf,
                  'refit':True,
-                 'scoring':'accuracy'
+                 'scoring':'accuracy',
+                 'verbose':verbose
     }
 
     return GridSearchCV(SVC(**svc_params), param_grid,**gs_params).fit(features,labels)

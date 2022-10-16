@@ -1,5 +1,5 @@
-from typing import Dict, List, Literal, Optional
-from pomegranate import DiscreteDistribution, MarkovChain
+from typing import Dict, List, Literal, Optional, Union
+#from pomegranate import DiscreteDistribution, MarkovChain
 import numpy as np
 from moseq2_viz.model.util import (get_syllable_statistics,
                                    get_transition_matrix, parse_model_results)
@@ -133,55 +133,24 @@ def get_transition_representation(model_file: str, index_file: str, group_map: D
 
     # Post-processing including truncation of transitions
     # Truncated transitions
+
     tm_vals_array = np.array(tm_vals)
-    top_transitions = np.argsort(tm_vals_array.mean(0))[-num_transitions:]
-    truncated_tm_vals = tm_vals_array[:,top_transitions]
+    sorted_inds = np.argsort(tm_vals_array.mean(0))
+    sorted_tm_vals = tm_vals_array[:,sorted_inds]
+    if num_transitions < 0:
+       tm_sums = list(sorted_tm_vals.sum(0))
+       first_zero = max_syllable - next((i for i, x in enumerate(tm_sums) if x), None)
+       truncated_tm_vals = sorted_tm_vals[:,:first_zero]
+    else:
+        truncated_tm_vals = sorted_tm_vals[:,num_transitions]
 
     return out_groups, truncated_tm_vals
-    
-def get_transition_representations_n(model_file : str, index_file: str, n: int,
-                     num_transitions: int,
-                     max_syllable: int=100, emissions: bool=True, 
-                     bad_syllables: List[int]=[-5],
-                     normalize='bigram',
-                     ablation: str='none',
-                     phrase_path: str=None):
-                     
-    '''get_transition_representations_n: calculate n-length transition probabilities. '''
-    
-    print('Loading raw data')
-    sentences, out_groups = get_raw_data(model_file, index_file, max_syllable=max_syllable)
-    
-    # Initialize group transition matrices
-    transition_matrices = []
-    
-    # Calculate n-transitions
-    print(f'Getting {n}-grams.')
-    for s, sentence in tqdm(enumerate(sentences)):
-        tmx = np.zeros(n*(max_syllable,))
-        num_syllables = len(sentence)
-        for i in range(num_syllables-n):
-            ngram = [int(s) for s in sentence[i:i+n]]
-            ind=[slice(l,l+1,1) for l in ngram]
-            tmx[ind] += 1
-        # Normalize (if transition never occured, have to be careful and not normalize by 0)
-        if normalize == 'bigram':
-            nm = tmx.sum()
-        else:
-            nm = np.maximum(np.ones_like(tmx), tmx.sum(n-1,keepdims=True))
-        tmx /= nm
-        transition_matrices.append(tmx)
-    tm_array = np.array(transition_matrices)
-    #top_transitions = np.argsort(tm_array.mean(0))[-num_transitions:]
-    #truncated_tm_vals = tm_array[:,top_transitions]
 
-    return tm_array, out_groups
-
-def get_embedding_representation(model_file: str, index_file: str, group_map: Dict[str, str], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, model_dest: str, ablation: str, phrase_path: str=None, seed=0):
+def get_embedding_representation(model_file: str, index_file: str, group_map: Dict[str, str], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, negative: int, model_dest: str, ablation: str, phrase_path: str=None, seed=0):
 
     sentences, out_groups = get_raw_data(model_file, index_file, max_syllable=100, emissions=emissions, bad_syllables=bad_syllables, ablation=ablation, phrase_path=phrase_path)
 
-    doc_embedding = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count, seed=seed)
+    doc_embedding = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count, negative=negative, seed=seed)
     rep = np.array(doc_embedding.fit_predict(sentences))
     doc_embedding.save(model_dest)
 

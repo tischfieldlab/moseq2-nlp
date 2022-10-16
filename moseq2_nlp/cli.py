@@ -42,13 +42,14 @@ def cli():
 @click.option('--model-path', type=click.Path(exists=True))
 @click.option('--index-path', type=click.Path(exists=True))
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
-@click.option('--classifier', type=click.Choice(['logistic_regression', 'svm']), default='logistic_regression')
+@click.option('--classifier', type=click.Choice(['logistic_regressor', 'svm']), default='logistic_regressor')
 @click.option('--kernel', type=click.Choice(['linear', 'poly', 'rbf', 'sigmoid']), default='rbf')
 @click.option('--emissions', is_flag=True)
 @click.option('--custom-groupings', type=str, multiple=True, default=[])
 @click.option('--num-syllables', type=int, default=70)
 @click.option('--num-transitions', type=int, default=300)
 @click.option('--min-count', type=int, default=1)
+@click.option('--negative', type=int, default=5)
 @click.option('--dm', default=2, type=IntChoice([0, 1, 2]))
 @click.option('--embedding-dim', type=int, default=70)
 @click.option('--embedding-window', type=int, default=4)
@@ -61,11 +62,12 @@ def cli():
 @click.option('--multi_class', default='ovr', type=click.Choice(['ovr', 'auto', 'multinomial']))
 @click.option('--seed', type=int, default=0)
 @click.option('--split-seed', type=int, default=0)
+@click.option('--verbose', type=int, default=0)
 @click.option('--config-file', type=click.Path())
-def train(name, save_dir, model_path, index_path, representation, classifier, kernel, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
-          embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, seed, split_seed, config_file):
-    trainer.train(name, save_dir, model_path, index_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, dm, embedding_dim, embedding_window,
-          embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, kernel, seed, split_seed)
+def train(name, save_dir, model_path, index_path, representation, classifier, kernel, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
+          embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, seed, split_seed, verbose, config_file):
+    trainer.train(name, save_dir, model_path, index_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
+          embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, kernel, seed, split_seed, verbose)
 
 @cli.command(name="generate-train-config", help="Generates a configuration file that holds editable options for training parameters.")
 @click.option('--output-file', '-o', type=click.Path(), default='train-config.yaml')

@@ -1,11 +1,14 @@
 from typing import List, Literal
 
 import numpy as np
+
+import gensim.models.doc2vec
+assert gensim.models.doc2vec.FAST_VERSION > -1, "This will be painfully slow otherwise"
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 
 class DocumentEmbedding(object):
-    def __init__(self, dm: Literal[0, 1, 2]=0, embedding_dim: int=256, embedding_window: int=5, embedding_epochs: int=50, min_count: int=5, seed: int=0):
+    def __init__(self, dm: Literal[0, 1, 2]=0, embedding_dim: int=256, embedding_window: int=5, embedding_epochs: int=50, min_count: int=2, negative: int=0, seed: int=0, multithreading: bool=False):
         ''' Create a document emedding with some parameters
 
         Parameters:
