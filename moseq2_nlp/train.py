@@ -69,14 +69,17 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
         clf = train_svm(X_train, y_train, K, penalty, num_c, seed, verbose=verbose)
     else:
         raise ValueError(f'Classifier {classifier} not recognized')
-    y_pred = clf.predict(X_test)
-    report = classification_report(y_test, y_pred, output_dict=True)
+
+    y_pred_train = clf.predict(X_test)
+    report_train = classification_report(y_train, y_pred_train, output_dict=True)
+
+    y_pred_test = clf.predict(X_test)
+    report_test = classification_report(y_test, y_pred_test, output_dict=True)
     
     times['Classifier'] = time.time() - start
 
-    save_dict['model_performance'] = {
-        f'classification_report': report
-    }
+    save_dict['model_performance_train'] = {f'classification_report': report_train}
+    save_dict['model_performance_test']  = {f'classification_report': report_test}
 
     save_dict['compute_times'] = times
     write_yaml(os.path.join(exp_dir, 'results.yaml'), save_dict)

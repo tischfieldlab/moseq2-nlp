@@ -139,7 +139,6 @@ def make_phrases(model_path, index_path, save_path, wordcloud_path, threshes, n,
         print('Making word cloud')
         make_wordcloud(save_path, wordcloud_path, max_plot=max_plot)
 
-
 @cli.command(name='grid-search', help='grid search hyperparameters')
 @click.argument("scan_file", type=click.Path(exists=True))
 @click.option('--save-dir', type=click.Path(), default=os.path.join(os.getcwd(), 'worker-configs'), help="Directory to save worker configurations")
