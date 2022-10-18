@@ -70,7 +70,7 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
     else:
         raise ValueError(f'Classifier {classifier} not recognized')
 
-    y_pred_train = clf.predict(X_test)
+    y_pred_train = clf.predict(X_train)
     report_train = classification_report(y_train, y_pred_train, output_dict=True)
 
     y_pred_test = clf.predict(X_test)

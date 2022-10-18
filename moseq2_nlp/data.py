@@ -10,6 +10,12 @@ import pdb
 from moseq2_nlp.models import DocumentEmbedding
 from scipy.sparse import coo_matrix
 import pickle
+from brown_clustering import BigramCorpus, BrownClustering
+
+def get_brown_clusters(sentences,alpha=.5,m=2):
+    corpus = BigramCorpus(sentences, alpha=0.5, min_count=0)
+    clustering = BrownClustering(corpus, m=4)
+    return clustering.train()
 
 def load_groups(index_file: str, custom_groupings: List[str]) -> Dict[str, str]:
     # Get group names available in model
@@ -142,7 +148,7 @@ def get_transition_representation(model_file: str, index_file: str, group_map: D
        first_zero = max_syllable - next((i for i, x in enumerate(tm_sums) if x), None)
        truncated_tm_vals = sorted_tm_vals[:,:first_zero]
     else:
-        truncated_tm_vals = sorted_tm_vals[:,num_transitions]
+        truncated_tm_vals = sorted_tm_vals[:,-1*num_transitions:]
 
     return out_groups, truncated_tm_vals
 
