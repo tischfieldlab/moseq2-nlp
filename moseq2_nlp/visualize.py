@@ -4,7 +4,7 @@ from wordcloud import WordCloud, STOPWORDS, ImageColorGenerator
 import pickle
 from collections import ChainMap
 import matplotlib.pyplot as plt
-from moseq2_nlp.data import get_raw_data
+#from moseq2_nlp.data import get_raw_data
 from matplotlib.lines import Line2D
 import matplotlib
 #matplotlib.rc('font', 'Arial')

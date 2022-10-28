@@ -10,6 +10,7 @@ from sklearn.metrics import classification_report
 
 from moseq2_nlp.data import get_embedding_representation, get_transition_representation, get_usage_representation, load_groups
 from moseq2_nlp.utils import ensure_dir, write_yaml
+import pickle
 import pdb
 
 import warnings
@@ -19,7 +20,7 @@ Representation = Literal['embeddings', 'usages', 'transitions']
 Classifier = Literal['logistic_regression', 'svm']
 Penalty = Literal['l1', 'l2', 'elasticnet']
 
-def train(name: str, save_dir: str, model_path: str, index_path: str, representation: Representation, classifier: Classifier, emissions: bool, custom_groupings: List[str],
+def train(name: str, save_dir: str, data_path: str, representation: Representation, classifier: Classifier, emissions: bool, custom_groupings: List[str],
         num_syllables: int, num_transitions: int, min_count: int, negative: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,
           embedding_epochs: int, bad_syllables: List[int], test_size: float, K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed:int, split_seed:int=None, verbose:int=0):
 
@@ -28,33 +29,35 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
     times = {'Preamble': 0.0, 'Data': 0.0, 'Features': 0.0, 'Classifier': 0.0}
 
     start = time.time()
-    group_map = load_groups(index_path, custom_groupings)
+    #group_map = load_groups(index_path, custom_groupings)
     bad_syllables = [int(bs) for bs in bad_syllables]
     exp_dir = ensure_dir(os.path.join(save_dir, name))
 
     times['Preamble'] = time.time() - start
 
-    start = time.time()
+    # Load data
+
+    with open(os.path.join(data_path,'sentences.pkl'),'rb') as fn:
+        sentences = pickle.load(fn)
+
+    with open(os.path.join(data_path,'labels.pkl'),'rb') as fn:
+        labels = pickle.load(fn)
+
     print('Getting features')
     if representation == 'embeddings':
-        labels, features = get_embedding_representation(model_path, index_path, group_map, emissions=emissions, bad_syllables=bad_syllables,
+        features = get_embedding_representation(sentences, emissions=emissions, bad_syllables=bad_syllables,
                             dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count, negative=negative,
                             model_dest=os.path.join(exp_dir, 'doc2vec'), ablation='none', phrase_path=None, seed=seed)
 
     elif representation == 'usages':
-        labels, features = get_usage_representation(model_path, index_path, group_map, num_syllables)
+        features = get_usage_representation(sentences, num_syllables)
 
     elif representation == 'transitions':
-        labels, features = get_transition_representation(model_path, index_path, group_map, num_transitions, max_syllable=num_syllables)
+        features = get_transition_representation(sentences, num_transitions, max_syllable=num_syllables)
     else:
         raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
 
-    #TODO:  REMOVE
-    inds = [ind for ind in range(len(labels)) if 'MIA' in labels[ind]]
-    labels = [labels[ind] for ind in inds]
-    features = features[inds]
-
-
+    pdb.set_trace()
     # Make train/test splits
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
 
@@ -70,7 +73,7 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
     else:
         raise ValueError(f'Classifier {classifier} not recognized')
 
-    y_pred_train = clf.predict(X_test)
+    y_pred_train = clf.predict(X_train)
     report_train = classification_report(y_train, y_pred_train, output_dict=True)
 
     y_pred_test = clf.predict(X_test)

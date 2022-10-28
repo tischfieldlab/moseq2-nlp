@@ -8,7 +8,7 @@ from numpy.random import choice, randint
 from tqdm import tqdm
 
 import moseq2_nlp.train as trainer
-from moseq2_nlp.data import get_raw_data, make_phrases_dataset
+from moseq2_nlp.data import make_phrases_dataset
 from moseq2_nlp.gridsearch import (find_gridsearch_results,
                                    generate_grid_search_worker_params,
                                    get_gridsearch_default_scans,
@@ -39,8 +39,7 @@ def cli():
 @cli.command(name='train', cls=command_with_config('config_file'), help='train a classifier')
 @click.option('--name', type=str)
 @click.option('--save-dir', type=str, default=os.getcwd())
-@click.option('--model-path', type=click.Path(exists=True))
-@click.option('--index-path', type=click.Path(exists=True))
+@click.option('--data-path', type=click.Path(exists=True))
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
 @click.option('--classifier', type=click.Choice(['logistic_regressor', 'svm']), default='logistic_regressor')
 @click.option('--kernel', type=click.Choice(['linear', 'poly', 'rbf', 'sigmoid']), default='rbf')
@@ -64,9 +63,9 @@ def cli():
 @click.option('--split-seed', type=int, default=0)
 @click.option('--verbose', type=int, default=0)
 @click.option('--config-file', type=click.Path())
-def train(name, save_dir, model_path, index_path, representation, classifier, kernel, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
+def train(name, save_dir, data_path, representation, classifier, kernel, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, seed, split_seed, verbose, config_file):
-    trainer.train(name, save_dir, model_path, index_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
+    trainer.train(name, save_dir, data_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, kernel, seed, split_seed, verbose)
 
 @cli.command(name="generate-train-config", help="Generates a configuration file that holds editable options for training parameters.")
@@ -75,7 +74,6 @@ def generate_train_config(output_file):
     output_file = os.path.abspath(output_file)
     write_yaml(output_file, get_command_defaults(train))
     print(f'Successfully generated train config file at "{output_file}".')
-
 
 @cli.command(name="make-random-documents", help="Splits frames or emissions into sentences of random lengths and keeps track of which sentences belong to what class.")
 @click.option('--model-path', type=str, default='/cs/usr/ricci/data/abraira/robust_septrans_model_20min_1000.p')

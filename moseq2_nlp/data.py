@@ -39,97 +39,23 @@ def load_groups(index_file: str, custom_groupings: List[str]) -> Dict[str, str]:
 
     return group_mapping
 
-def get_raw_data(model_file: str, index_file: str, max_syllable: int=100, emissions: bool=True, bad_syllables: List[int]=[-5], ablation: str='none', phrase_path: str=None):
-    _, sorted_index = parse_index(index_file)
-    model = parse_model_results(model_file, sort_labels_by_usage=True, count='usage')
-    label_group = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
+def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_syllables: List[int]=[-5]):
+    U = []
+    for sentence in sentences:
+        sentence = np.array([int(s) for s in sentence if s not in bad_syllables])
+        u, _ = get_syllable_statistics([sentence], max_syllable=max_syllable, count='usage')
+        u_vals = list(u.values())
+        total_u = np.sum(u_vals)
+        U.append(np.array(u_vals) / total_u)
+    return np.array(U)
 
-    sentences = []
-    out_groups: List[str] = []
-    for l, g in zip(tqdm(model['labels']), label_group):
-        l = list(filter(lambda a: a not in bad_syllables, l))
-        np_l = np.array(l)
-        if emissions:
-            cp_inds = np.concatenate((np.where(np.diff(np_l) != 0 )[0],np.array([len(l) - 1])))
-            syllables = np_l[cp_inds]
-        else:
-            syllables = np_l
-        sentence = [str(syl) for syl in syllables]
-        sentences.append(sentence)
-        out_groups.append(g)
-
-    if ablation != 'none':
-        if emissions is False:
-            raise ValueError('Ablation only works with emission data!')
-
-        # Load phrases for each group
-        if phrase_path is not None:
-            with open(phrase_path, 'rb') as handle:
-                group_dict = pickle.load(handle)
-
-        else:
-            raise ValueError('Expected a `phrase_path` str, but got `None`!')
-
-        # For each group, phrase_dict and proportion of deleted syllables
-        for g, (group, (phrase_dict, prop)) in enumerate(group_dict.items()):
-
-            # For each sentence
-            for s, sentence in enumerate(sentences):
-                if out_groups[s] != group: continue
-                else: 
-                    if ablation == 'targeted':
-                        # For each phrase
-                        for phrase in phrase_dict.keys():
-                            # Turn phrase into list
-                            dissociated_phrase = phrase.split('>')
-                            len_phrase = len(dissociated_phrase)
-                            for m, module in enumerate(sentence):
-                                # If phrase detected
-                                if sentence[m:m + len_phrase] == dissociated_phrase:
-                                    # Get random phrase without identical neighbors
-                                    rand_phrase = np.zeros((len_phrase))
-                                    while 0 in np.diff(rand_phrase):
-                                        rand_phrase = np.random.randint(0,max_syllable, len_phrase)
-
-                                    # Insert random phrase at target location
-                                    sentences[s][m:m + len_phrase] = [str(el) for el in rand_phrase]
-
-                    elif ablation == 'random':
-                        for m, module in enumerate(sentence):
-                            # Randomly replace syllables at rate prop
-                            if np.random.rand() < prop:
-                                sentences[s][m] = str(np.random.randint(0,max_syllable))
-    return sentences, out_groups
-
-def get_usage_representation(model_file: str, index_file: str, group_map: Dict[str, str], max_syllable: int=100):
-    _, sorted_index = parse_index(index_file)
-    model = parse_model_results(model_file, sort_labels_by_usage=True, count='usage')
-    label_group = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
-
-    usage_vals = []
-    out_groups = []
-    for l, g in zip(tqdm(model['labels']), label_group):
-        if g in group_map.keys():
-            u, _ = get_syllable_statistics(l, max_syllable=max_syllable, count='usage')
-            u_vals = list(u.values())
-            total_u = np.sum(u_vals)
-            usage_vals.append(np.array(u_vals) / total_u)
-            out_groups.append(group_map[g])
-    return out_groups, np.array(usage_vals)
-
-
-def get_transition_representation(model_file: str, index_file: str, group_map: Dict[str, str], num_transitions: int, max_syllable: int=100):
-    _, sorted_index = parse_index(index_file)
-    model = parse_model_results(model_file, sort_labels_by_usage=True, count='usage')
-    label_group = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
+def get_transition_representation(sentences: List[List[str]], num_transitions: int, max_syllable: int,bad_syllables: List[int]=[-5]):
 
     tm_vals = []
-    out_groups = []
-    for l, g in zip(tqdm(model['labels']), label_group):
-        if g in group_map.keys():
-            tm = get_transition_matrix([l], combine=True, max_syllable=max_syllable)
-            tm_vals.append(tm.ravel())
-            out_groups.append(group_map[g])
+    for sentence in sentences:
+        sentence = np.array([int(s) for s in sentence if s not in bad_syllables])
+        tm = get_transition_matrix([sentence], combine=True, max_syllable=max_syllable)
+        tm_vals.append(tm.ravel())
 
     # Post-processing including truncation of transitions
     # Truncated transitions
@@ -138,23 +64,18 @@ def get_transition_representation(model_file: str, index_file: str, group_map: D
     sorted_inds = np.argsort(tm_vals_array.mean(0))
     sorted_tm_vals = tm_vals_array[:,sorted_inds]
     if num_transitions < 0:
-       tm_sums = list(sorted_tm_vals.sum(0))
-       first_zero = max_syllable - next((i for i, x in enumerate(tm_sums) if x), None)
-       truncated_tm_vals = sorted_tm_vals[:,:first_zero]
+        tm_sums = list(sorted_tm_vals.sum(0))
+        first_zero = max_syllable - next((i for i, x in enumerate(tm_sums) if x), None)
+        T = sorted_tm_vals[:,:first_zero]
     else:
-        truncated_tm_vals = sorted_tm_vals[:,num_transitions]
+        T = sorted_tm_vals[:,:num_transitions]
+    return T
 
-    return out_groups, truncated_tm_vals
-
-def get_embedding_representation(model_file: str, index_file: str, group_map: Dict[str, str], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, negative: int, model_dest: str, ablation: str, phrase_path: str=None, seed=0):
-
-    sentences, out_groups = get_raw_data(model_file, index_file, max_syllable=100, emissions=emissions, bad_syllables=bad_syllables, ablation=ablation, phrase_path=phrase_path)
-
-    doc_embedding = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count, negative=negative, seed=seed)
-    rep = np.array(doc_embedding.fit_predict(sentences))
-    doc_embedding.save(model_dest)
-
-    return out_groups, rep
+def get_embedding_representation(sentences: List[List[str]], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, negative: int, model_dest: str, ablation: str, phrase_path: str=None, seed=0):
+     doc_embedding = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count, negative=negative, seed=seed)
+     E = np.array(doc_embedding.fit_predict(sentences))
+     doc_embedding.save(model_dest)
+     return E
     
 def fit_markov_chain(syllables, k, max_syllable=100):
     '''sample_markov_chain: using transition matrix `tmx`, sample from a markov chain `num_syllables` times'''
