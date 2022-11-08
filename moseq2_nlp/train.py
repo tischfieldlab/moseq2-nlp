@@ -57,7 +57,6 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
     else:
         raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
 
-    pdb.set_trace()
     # Make train/test splits
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
 

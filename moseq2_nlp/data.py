@@ -44,7 +44,7 @@ def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_
     for sentence in sentences:
         sentence = np.array([int(s) for s in sentence if s not in bad_syllables])
         u, _ = get_syllable_statistics([sentence], max_syllable=max_syllable, count='usage')
-        u_vals = list(u.values())
+        u_vals = list(u.values())[:max_syllable]
         total_u = np.sum(u_vals)
         U.append(np.array(u_vals) / total_u)
     return np.array(U)
@@ -68,7 +68,7 @@ def get_transition_representation(sentences: List[List[str]], num_transitions: i
         first_zero = max_syllable - next((i for i, x in enumerate(tm_sums) if x), None)
         T = sorted_tm_vals[:,:first_zero]
     else:
-        T = sorted_tm_vals[:,:num_transitions]
+        T = sorted_tm_vals[:,-1*num_transitions:]
     return T
 
 def get_embedding_representation(sentences: List[List[str]], emissions: bool, bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, negative: int, model_dest: str, ablation: str, phrase_path: str=None, seed=0):
@@ -121,6 +121,7 @@ def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_coun
 
                 bigram = f'{a}>{b}'
                 count_ab = foreground_bigrams.count(bigram)
+		# score = (#(ab in fg) - min) * len_vocab / #(a in bg)*#(b in bg)
                 score = original_scorer(count_a, count_b, count_ab, len_vocab, min_count,-1)
                 scored_bigrams[bigram] = score
 
@@ -182,38 +183,36 @@ def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
     prop = count / num_syl
     return (all_phrases, prop)
 
-def make_phrases_dataset(model_path, index_path, save_path, threshes, n, min_count):
+def make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count):
 
     '''make_phrases_dataset: makes a dictionary containing disciminating phrases for each class in a dataset
 
         Positional args:
-            model_path (str): path of .p model file
-            index_path (str): path of .yaml index file
+            sentences (List of strs): list of sentences representing moseq emissions
+            labels (List of strs): list of class labels for each animal
             save_path (str): path for saving pickled dictionary of phrases
             threshes (list): a list of floating point thresholds which determine which n-gram phrases will be significant for each n
             n (int): number of times to run the agglomeration algorithm. Running n times will potentially yield up to 2n-grams
             min_count (int): minimum number of times a phrase has to appear to be considered for significance
             '''
-    # Load raw data
-    sequences, out_groups = get_raw_data(model_path, index_path)
-
-    # Get group names
-    unique_groups = []
-    for group in out_groups:
-        if group not in unique_groups:
-            unique_groups.append(group)
-    num_groups = len(unique_groups) 
+    # Get labels names
+    unique_labels = []
+    for label in labels:
+        if label not in unique_labels:
+            unique_labels.append(label)
+    num_classes = len(unique_labels) 
     all_group_phrases = {}
 
     # For each group
-    for group in unique_groups:
+    for label in unique_labels:
 
-        # Compare group to other groups (including itself)
-        foreground_seqs = [seq for s, seq in enumerate(sequences) if out_groups[s] == group]
-        background_seqs = sequences
-        all_group_phrases[group] = make_phrases(foreground_seqs, background_seqs, threshes, n, min_count)
+        # Compare label to other labels (including itself)
+        foreground_sents = [seq for s, seq in enumerate(sentences) if labels[s] == label]
+        background_sents = sentences
+        all_group_phrases[labels] = make_phrases(foreground_sents, background_sents, threshes, n, min_count)
 
     # Save
     with open(save_path, 'wb') as handle:
+        print(f'Saving at {handle}')
         pickle.dump(all_group_phrases, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    return all_group_phrases
+    

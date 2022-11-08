@@ -1,6 +1,8 @@
 import os
 import sys
 from functools import partial
+import pickle
+from typing import List
 
 import click
 from click_option_group import optgroup
@@ -121,18 +123,24 @@ def make_random_documents(model_path, index_path, splits, min_length, max_length
 
 
 @cli.command(name='make-phrases', help='finds and saves compound modules')
-@click.argument('model-path', type=click.Path(exists=True))
-@click.argument('index-path', type=click.Path(exists=True))
-@click.option('--save-path', type=click.Path(), default='./all_phrases.pickle')
+@click.argument('data-path', type=click.Path(exists=True))
+@click.option('--save-path', type=click.Path(), default='./all_phrases.pkl')
 @click.option('--threshes', type=float, multiple=True, default=[.01,.01])
 @click.option('--n', type=int, default=2)
 @click.option('--min-count', type=int, default=2)
-@click.option('--visualize', is_flag=True)
+@click.option('--visualize', is_flag=True, default=False)
 @click.option('--wordcloud-path', type=click.Path(), default='.')
 @click.option('--max-plot', type=int, default=15)
-def make_phrases(model_path, index_path, save_path, wordcloud_path, threshes, n, min_count, visualize, max_plot):
+def make_phrases(data_path, save_path, wordcloud_path, threshes, n, min_count, visualize, max_plot):
 
-    #make_phrases_dataset(model_path, index_path, save_path, threshes, n, min_count)
+    with open(os.path.join(data_path,'sentences.pkl'),'rb') as fn:
+        sentences = pickle.load(fn)
+
+    with open(os.path.join(data_path,'labels.pkl'),'rb') as fn:
+        labels = pickle.load(fn)
+
+    make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count)
+
     if visualize:
         print('Making word cloud')
         make_wordcloud(save_path, wordcloud_path, max_plot=max_plot)
@@ -195,6 +203,41 @@ def aggregate_gridsearch_results(results_directory, best_key):
     print('Best model:')
     print(results.iloc[0])
 
+@cli.command(name="moseq-to-raw", help="convert model and index file to raw sentences and labels")
+@click.argument("model-file", type=click.Path(exists=True))
+@click.argument("index-file", type=click.Path(exists=True))
+@click.option("--data-dir", type=str, default='.')
+@click.option("--special-label", type=str)
+@click.option("--bad-label", type=str)
+def moseq_to_raw(model_file, index_file, data_dir, special_label, bad_label):
+
+    ensure_dir(data_dir)
+    _, sorted_index = parse_index(index_file)
+    model = parse_model_results(model_file, sort_labels_by_usage=True, count='usage')
+    labels = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
+    sentences = model['labels']
+
+    if special_label is not None:
+        sentences = [[str(syl) for syl in sentence] for (s,sentence) in enumerate(sentences) if special_label in labels[s]]
+        labels    = [label for label in labels if special_label in label]
+
+    if bad_label is not None:
+        sentences = [[str(syl) for syl in sentence] for (s,sentence) in enumerate(sentences) if bad_label not in labels[s]]
+        labels    = [label for label in labels if bad_label not in label]
+
+    sentences = [[str(syl) for syl in sentence] for (s,sentence) in enumerate(sentences) if labels[s]!= 'CAR bsl']
+    labels    = [label for label in labels if label != 'CAR bsl']
+
+    unique_labels = []
+    for label in labels:
+        if label not in unique_labels:
+            unique_labels.append(label)
+    print(len(unique_labels))
+
+    for dat, fn in zip([sentences, labels],['sentences', 'labels']):
+        fn = os.path.join(data_dir, f'{fn}.pkl')
+        with open(fn, 'wb') as file:
+            pickle.dump(dat,file)
 
 if __name__ == '__main__':
     cli()
