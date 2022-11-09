@@ -50,11 +50,25 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
         raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
 
     #TODO:  REMOVE
-    inds = [ind for ind in range(len(labels)) if 'MIA' in labels[ind]]
-    labels = [labels[ind] for ind in inds]
-    features = features[inds]
+    new_labels = []
+    new_features = []
+    for i in range(len(labels)):
+        lb = labels[i]
+        ft = features[i]
+        if ('CAR ' in lb) and ('CAR bsl') not in lb and ('ctrl' not in lb):
+            new_labels.append(lb)
+            new_features.append(features)
 
+    labels = new_labels
+    features = np.array(new_features)
+    print(features.shape)
 
+    unique_labels = []
+    for lb in labels:
+        if lb not in unique_labels:
+            unique_labels.append(lb)
+
+    print(len(unique_labels))
     # Make train/test splits
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
 

@@ -109,25 +109,21 @@ def get_raw_data(model_file: str, index_file: str, max_syllable: int=100, emissi
 
 def get_usage_representation(model_file: str, index_file: str, group_map: Dict[str, str], max_syllable: int=100, sentences=None, out_groups=None):
 
-    if model_file is not None and index_file is not None:
-        _, sorted_index = parse_index(index_file)
-        model = parse_model_results(model_file, sort_labels_by_usage=True, count='usage')
-        label_group = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
+    _, sorted_index = parse_index(index_file)
+    model = parse_model_results(model_file, sort_labels_by_usage=True, count='usage')
+    label_group = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
 
     #NOTE: Do what with label group?
 
     usage_vals = []
-
-    if out_groups is None:
-        out_groups = []
-        compute_out_groups = True
+    out_groups = []
     for l, g in zip(tqdm(model['labels']), label_group):
         if g in group_map.keys():
             u, _ = get_syllable_statistics(l, max_syllable=max_syllable, count='usage')
             u_vals = list(u.values())
             total_u = np.sum(u_vals)
             usage_vals.append(np.array(u_vals) / total_u)
-            if compute_out_groups: out_groups.append(group_map[g])
+            out_groups.append(group_map[g])
     return out_groups, np.array(usage_vals)
 
 
