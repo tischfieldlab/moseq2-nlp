@@ -122,7 +122,9 @@ def get_usage_representation(model_file: str, index_file: str, group_map: Dict[s
             u, _ = get_syllable_statistics(l, max_syllable=max_syllable, count='usage')
             u_vals = list(u.values())
             total_u = np.sum(u_vals)
+            tmp = np.array(u_vals) / total_u
             usage_vals.append(np.array(u_vals) / total_u)
+            print(np.array(usage_vals).shape)
             out_groups.append(group_map[g])
     return out_groups, np.array(usage_vals)
 

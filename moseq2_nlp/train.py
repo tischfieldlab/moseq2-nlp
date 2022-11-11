@@ -55,9 +55,9 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
     for i in range(len(labels)):
         lb = labels[i]
         ft = features[i]
-        if ('CAR ' in lb) and ('CAR bsl') not in lb and ('ctrl' not in lb):
+        if ('CAR ' in lb) and ('CAR bsl' != lb) and ('ctrl' not in lb):
             new_labels.append(lb)
-            new_features.append(features)
+            new_features.append(ft)
 
     labels = new_labels
     features = np.array(new_features)
@@ -67,8 +67,8 @@ def train(name: str, save_dir: str, model_path: str, index_path: str, representa
     for lb in labels:
         if lb not in unique_labels:
             unique_labels.append(lb)
-
     print(len(unique_labels))
+    print(unique_labels)
     # Make train/test splits
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
 
