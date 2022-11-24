@@ -126,7 +126,7 @@ def make_random_documents(model_path, index_path, splits, min_length, max_length
 @cli.command(name='make-phrases', help='finds and saves compound modules')
 @click.argument('data-path', type=click.Path(exists=True))
 @click.option('--save-path', type=click.Path(), default='./all_phrases.pkl')
-@click.option('--threshes', type=float, multiple=True, default=[.01,.01])
+@click.option('--threshes', type=float, multiple=True, default=[.001,.001])
 @click.option('--n', type=int, default=2)
 @click.option('--min-count', type=int, default=2)
 @click.option('--visualize', is_flag=True, default=False)

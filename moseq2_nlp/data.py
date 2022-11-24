@@ -76,6 +76,16 @@ def get_embedding_representation(sentences: List[List[str]], emissions: bool, ba
      E = np.array(doc_embedding.fit_predict(sentences))
      doc_embedding.save(model_dest)
      return E
+
+def get_emissions(sentences):
+    new_sentences = []
+        for sentence in sentences:
+            sentence = np.array([int(s) for s in sentence])
+            print(sentence.shape)
+            print(np.array([len(sentence) - 1]).shape)
+            cps = np.concatenate([np.where(np.diff(sentence) != 0)[0], np.array([len(sentence) - 1])], axis=0)
+            new_sentences.append([str(s) for s in sentence[cps]])
+    return new_sentences
     
 def fit_markov_chain(syllables, k, max_syllable=100):
     '''sample_markov_chain: using transition matrix `tmx`, sample from a markov chain `num_syllables` times'''
@@ -209,24 +219,48 @@ def make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count):
         # Compare label to other labels (including itself)
         foreground_sents = [seq for s, seq in enumerate(sentences) if labels[s] == label]
         background_sents = sentences
-        all_group_phrases[labels] = make_phrases(foreground_sents, background_sents, threshes, n, min_count)
+        all_group_phrases[label] = make_phrases(foreground_sents, background_sents, threshes, n, min_count)
 
     # Save
     with open(save_path, 'wb') as handle:
         print(f'Saving at {handle}')
         pickle.dump(all_group_phrases, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-def abblate_phrases(sentences, phrase_path, max_syllble=70):
+def ablate_phrases(sentences, labels, phrase_path, max_syllable=70):
     with open(phrase_path, 'rb') as fn:
         phrases = pickle.load(fn) 
 
-    # TODO: make sure you go from long to short phrases
-    for phrase in phrases.keys():
-        phrase_elements = phrase.split('>')
-        k = len(phrase_elements)
-        for sentence in sentences:
-            for i in range(len(sentence) - k):
-                candidate_phrase = sentence[i:i+k]
-                if candidate_phrase == phrase_elements:
-                    random_phrase = list(np.random.randint(0, max_syllable, k))
-                    sentence[i:i+k] = random_phrase
+    unique_labels =[]
+    for label in labels:
+        if label not in unique_labels:
+            unique_labels.append(label)
+
+    ablated_sentences = []
+    ablated_labels    = []
+
+    for label in unique_labels:
+        class_sentences = [sentence for (s, sentence) in enumerate(sentences) if labels[s] == label]
+        class_labels = [label] * len(class_sentences)
+        class_phrases = phrases[label][0]
+
+        ablated_labels += class_labels
+
+        num_ablated = 0
+        total_syl   = 0
+        # TODO: make sure you go from long to short phrases
+        for sentence in class_sentences:
+            total_syl += len(sentence)
+            for phrase_tuple in class_phrases:
+                phrase = phrase_tuple[0]
+                prop = phrase_tuple[1]
+                phrase_elements = phrase.split('>')
+                k = len(phrase_elements)
+                for i in range(len(sentence) - k):
+                    candidate_phrase = sentence[i:i+k]
+                    if candidate_phrase == phrase_elements:
+                        num_ablated += k
+                        random_phrase = list(np.random.randint(0, max_syllable, k))
+                        sentence[i:i+k] = random_phrase
+            ablated_sentences.append(sentence)
+        print('%.3f perc. of syllables ablated.' % (100 * (float(num_ablated) / total_syl)) )
+    return ablated_sentences, ablated_labels

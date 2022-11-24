@@ -8,7 +8,7 @@ from sklearn.linear_model import LogisticRegressionCV
 from sklearn.model_selection import KFold, cross_val_score, train_test_split, GridSearchCV
 from sklearn.metrics import classification_report, confusion_matrix
 
-from moseq2_nlp.data import get_embedding_representation, get_transition_representation, get_usage_representation, load_groups
+from moseq2_nlp.data import get_embedding_representation, get_transition_representation, get_usage_representation, load_groups, get_emissions
 from moseq2_nlp.utils import ensure_dir, write_yaml
 import pickle
 import pandas as pd
@@ -39,6 +39,7 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
     print(data_path)
     with open(os.path.join(data_path,'sentences.pkl'),'rb') as fn:
         sentences = pickle.load(fn)
+        if emissions: sentences = get_emissions(sentences)
 
     with open(os.path.join(data_path,'labels.pkl'),'rb') as fn:
         labels = pickle.load(fn)
