@@ -67,6 +67,7 @@ def cli():
 @click.option('--config-file', type=click.Path())
 def train(name, save_dir, data_path, representation, classifier, kernel, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, seed, split_seed, verbose, config_file):
+    print(test_size)
     trainer.train(name, save_dir, data_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, kernel, seed, split_seed, verbose)
 
@@ -140,7 +141,7 @@ def make_phrases(data_path, save_path, wordcloud_path, threshes, n, min_count, v
         labels = pickle.load(fn)
 
     make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count)
-
+    
     if visualize:
         print('Making word cloud')
         make_wordcloud(save_path, wordcloud_path, max_plot=max_plot)
@@ -207,9 +208,8 @@ def aggregate_gridsearch_results(results_directory, best_key):
 @click.argument("model-file", type=click.Path(exists=True))
 @click.argument("index-file", type=click.Path(exists=True))
 @click.option("--data-dir", type=str, default='.')
-@click.option("--special-label", type=str)
-@click.option("--bad-label", type=str)
-def moseq_to_raw(model_file, index_file, data_dir, special_label, bad_label):
+@click.option("--special-labels", '-sl', multiple=True, default=[])
+def moseq_to_raw(model_file, index_file, data_dir, special_labels):
 
     ensure_dir(data_dir)
     _, sorted_index = parse_index(index_file)
@@ -217,16 +217,10 @@ def moseq_to_raw(model_file, index_file, data_dir, special_label, bad_label):
     labels = [sorted_index['files'][uuid]['group'] for uuid in model['keys']]
     sentences = model['labels']
 
-    if special_label is not None:
-        sentences = [[str(syl) for syl in sentence] for (s,sentence) in enumerate(sentences) if special_label in labels[s]]
-        labels    = [label for label in labels if special_label in label]
-
-    if bad_label is not None:
-        sentences = [[str(syl) for syl in sentence] for (s,sentence) in enumerate(sentences) if bad_label not in labels[s]]
-        labels    = [label for label in labels if bad_label not in label]
-
-    sentences = [[str(syl) for syl in sentence] for (s,sentence) in enumerate(sentences) if labels[s]!= 'CAR bsl']
-    labels    = [label for label in labels if label != 'CAR bsl']
+    if len(special_labels) > 0:
+        inds = [i for i in range(len(labels)) if labels[i] in special_labels] 
+        sentences = [[str(syl) for syl in sentence] for (s,sentence) in enumerate(sentences) if s in inds]
+        labels    = [label for l, label in enumerate(labels) if l in inds]
 
     unique_labels = []
     for label in labels:

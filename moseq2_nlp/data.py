@@ -215,4 +215,18 @@ def make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count):
     with open(save_path, 'wb') as handle:
         print(f'Saving at {handle}')
         pickle.dump(all_group_phrases, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    
+
+def abblate_phrases(sentences, phrase_path, max_syllble=70):
+    with open(phrase_path, 'rb') as fn:
+        phrases = pickle.load(fn) 
+
+    # TODO: make sure you go from long to short phrases
+    for phrase in phrases.keys():
+        phrase_elements = phrase.split('>')
+        k = len(phrase_elements)
+        for sentence in sentences:
+            for i in range(len(sentence) - k):
+                candidate_phrase = sentence[i:i+k]
+                if candidate_phrase == phrase_elements:
+                    random_phrase = list(np.random.randint(0, max_syllable, k))
+                    sentence[i:i+k] = random_phrase

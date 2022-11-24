@@ -6,11 +6,12 @@ import numpy as np
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.model_selection import KFold, cross_val_score, train_test_split, GridSearchCV
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 
 from moseq2_nlp.data import get_embedding_representation, get_transition_representation, get_usage_representation, load_groups
 from moseq2_nlp.utils import ensure_dir, write_yaml
 import pickle
+import pandas as pd
 import pdb
 
 import warnings
@@ -29,14 +30,13 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
     times = {'Preamble': 0.0, 'Data': 0.0, 'Features': 0.0, 'Classifier': 0.0}
 
     start = time.time()
-    #group_map = load_groups(index_path, custom_groupings)
     bad_syllables = [int(bs) for bs in bad_syllables]
     exp_dir = ensure_dir(os.path.join(save_dir, name))
 
     times['Preamble'] = time.time() - start
 
     # Load data
-
+    print(data_path)
     with open(os.path.join(data_path,'sentences.pkl'),'rb') as fn:
         sentences = pickle.load(fn)
 
@@ -57,7 +57,14 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
     else:
         raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
 
+    unique_labels = []
+    for lb in labels:
+        if lb not in unique_labels:
+            unique_labels.append(lb)
+    print(unique_labels)
+
     # Make train/test splits
+    print(test_size)
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
 
     times['Features'] = time.time() - start
@@ -77,6 +84,9 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
 
     y_pred_test = clf.predict(X_test)
     report_test = classification_report(y_test, y_pred_test, output_dict=True)
+
+    cm_train = confusion_matrix(y_train, y_pred_train, labels=unique_labels)
+    cm_test = confusion_matrix(y_test, y_pred_test, labels=unique_labels)
     
     times['Classifier'] = time.time() - start
 
@@ -85,6 +95,15 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
 
     save_dict['compute_times'] = times
     write_yaml(os.path.join(exp_dir, 'results.yaml'), save_dict)
+
+    for nm, lb_true, lb_pred in zip(['train', 'test'], [y_train, y_test], [y_pred_train, y_pred_test]):
+        cm = confusion_matrix(lb_true, lb_pred, labels=unique_labels, normalize='true')
+        df = pd.DataFrame(cm)
+        df.set_axis([ul + '_pred' for ul in unique_labels], axis=0, inplace=True)
+        df.set_axis([ul + '_true' for ul in unique_labels], axis=1, inplace=True)
+        df
+        df.to_pickle(os.path.join(exp_dir, f'cm_{nm}.pkl'))
+
     np.save(os.path.join(exp_dir, 'features.npy'), features)
 
 def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed: int, multi_class: Literal['auto', 'multi_class', 'ovr'], verbose: int=0):
