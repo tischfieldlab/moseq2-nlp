@@ -50,6 +50,17 @@ jobs:
       with:
         python-version: 3.9
 
+    - name: Checkout moseq2-viz
+      uses: actions/checkout@v2
+      with:
+        path: ./repos/moseq2-viz
+        token: ${{ secrets.SERVICE_ACCOUNT_TOKEN }}
+        repository: tischfieldlab/moseq2-viz
+
+    - name: Install moseq2-viz
+      run: |
+        pip install -e ./repos/moseq2-viz
+
     - name: Install dependencies
       run: |
         pip install --editable .[dev]
