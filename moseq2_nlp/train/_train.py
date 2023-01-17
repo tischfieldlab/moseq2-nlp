@@ -9,7 +9,7 @@ from sklearn.model_selection import KFold, cross_val_score, train_test_split, Gr
 from sklearn.metrics import classification_report, confusion_matrix
 
 from moseq2_nlp.data import get_embedding_representation, get_transition_representation, get_usage_representation, load_groups, get_emissions
-from moseq2_nlp.utils import ensure_dir, write_yaml
+from moseq2_nlp.util import ensure_dir, write_yaml, get_unique_list_elements
 import pickle
 import pandas as pd
 import pdb
@@ -21,9 +21,40 @@ Representation = Literal['embeddings', 'usages', 'transitions']
 Classifier = Literal['logistic_regression', 'svm']
 Penalty = Literal['l1', 'l2', 'elasticnet']
 
-def train(name: str, save_dir: str, data_path: str, representation: Representation, classifier: Classifier, emissions: bool, custom_groupings: List[str],
+def train(name: str, save_dir: str, data_path: str, representation: Representation, classifier: Classifier, emissions: bool,
         num_syllables: int, num_transitions: int, min_count: int, negative: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,
           embedding_epochs: int, bad_syllables: List[int], test_size: float, K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed:int, split_seed:int=None, verbose:int=0):
+
+    """Compute animal features and train classifier. .
+
+    Args:
+        name: string which names the experiment  
+        save_dir: directory in which the features and classifier results will be saved
+        representation: string indicating which representation, among `usages`, `transitions` and `embeddings`, will be used
+        classifier: string, either `logistic_regression` or `svm`, which determines the classifier type
+        emissions: boolean determining whether behavior will be represented as frames (False) or emisisons (True)
+        num_syllables: int indicating the total number of syllables to include in the analysis. Syllables with higher values are excluded. 
+        num_transitions: int indicating the total number of transitions to include in the `transitions` representation, should that representation be chosen
+        min_count: int controling minimum number of times a syllable must appear for it to be included in the `embedding` representation, should that representation be chosen
+        negative: int which is used as the exponent for negative sampling in doc2vec
+        dm: int, either 0, 1, or 2, controling which among dbow (0), distributed memory (1), or an average of the two (2), should be used for the `embedding` representation
+        embedding_dim: int, dimension of the doc2vec embedding space
+        embedding_window: int, size of context window for doc2vec embeddings
+        embedding_epochs: int, number of passes through the data set during doc2vec training
+        bad_syllables: list of ints indicating which syllables should be excluded form the analysis
+        test_size: float between 0 and 1 indicating proportion of data set to be held out for testing
+        K: int, number of splits for cross validation
+        penalty: string controling which type of penalty to use for the classifier (see svm and logistic regressor docs in sklearn)
+        num_c: int, how many regularizers to gridsearch over in cross validation, logarithmically spaced between [1e-5 and 1e5]
+        multi_class: string determining which multiclass scheme to use for the logistic regressor (see sklearn docs)
+        kernel:  string determining which type of `svm` kernel should be used (see sklearn docs)
+        seed: int, random seed for feature learning
+        split_seed: int, random seed for the train-test split
+        verbose: int controling verbosity of sklearn classifiers
+
+    See also: `train_regressor, train_svm`
+    """
+
 
     np.random.seed(seed)    
     save_dict = {}
@@ -36,7 +67,6 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
     times['Preamble'] = time.time() - start
 
     # Load data
-    print(data_path)
     with open(os.path.join(data_path,'sentences.pkl'),'rb') as fn:
         sentences = pickle.load(fn)
         if emissions: sentences = get_emissions(sentences)
@@ -58,14 +88,9 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
     else:
         raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
 
-    unique_labels = []
-    for lb in labels:
-        if lb not in unique_labels:
-            unique_labels.append(lb)
-    print(unique_labels)
+    unique_labels = get_unique_list_elements(labels)
 
     # Make train/test splits
-    print(test_size)
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=split_seed, stratify=labels)
 
     times['Features'] = time.time() - start
@@ -100,8 +125,8 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
     for nm, lb_true, lb_pred in zip(['train', 'test'], [y_train, y_test], [y_pred_train, y_pred_test]):
         cm = confusion_matrix(lb_true, lb_pred, labels=unique_labels, normalize='true')
         df = pd.DataFrame(cm)
-        df.set_axis([ul + '_pred' for ul in unique_labels], axis=0, inplace=True)
-        df.set_axis([ul + '_true' for ul in unique_labels], axis=1, inplace=True)
+        df.set_axis([str(ul) + '_pred' for ul in unique_labels], axis=0, inplace=True)
+        df.set_axis([str(ul) + '_true' for ul in unique_labels], axis=1, inplace=True)
         df
         df.to_pickle(os.path.join(exp_dir, f'cm_{nm}.pkl'))
 
@@ -113,7 +138,6 @@ def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed
     kf = KFold(n_splits=int(len(labels) / float(K)))
 
     n_labels = len(np.unique(labels))
-    #label_binarizer = LabelBinarizer().fit(np.arange(n_labels))
 
     params = {
         'cv': kf,
