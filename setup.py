@@ -27,8 +27,10 @@ setup(
     extras_require={
         'dev': [
             'pytest',
-            'pytest-pep8',
-            'pytest-cov'
+            'pytest-cov',
+            'pydocstyle',
+            'mypy',
+            'black'
         ]
     },
     entry_points={'console_scripts': ['moseq2-nlp = moseq2_nlp.cli:cli']}

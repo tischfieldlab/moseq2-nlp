@@ -1,0 +1,7 @@
+name: paws-tools
+
+dependencies:
+  - python>=3.8,<=3.9
+  - pip
+  - pip:
+    - "--editable=.[dev]"
