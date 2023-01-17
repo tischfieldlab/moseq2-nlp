@@ -9,7 +9,7 @@ setup(
     #platforms=['mac', 'unix'],
     python_requires='>=3.8',
     install_requires=[
-        'numpy>=1.21',
+        'numpy',
         'brown-clustering',
         'tqdm',
         'notebook',
