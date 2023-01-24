@@ -5,8 +5,8 @@ from brown_clustering import BigramCorpus, BrownClustering
 from tqdm import tqdm
 
 class BrownClusterer(object):
-     """Object consolidating methjods associated with Brown clustering. Clusters elements in a sequence according to neighborhood statistics. 
-     """
+    """Object consolidating methjods associated with Brown clustering. Clusters elements in a sequence according to neighborhood statistics. 
+    """
 
     def make_corpus(self, sentences, alpha=0.0, min_count=0):
         """Converts sentences to a bigram corpus object. 
@@ -18,7 +18,7 @@ class BrownClusterer(object):
 
         Returns:
             corpus: BigramCorpus object
-         """
+        """
 
         corpus = BigramCorpus(sentences, alpha=alpha, min_count=min_count)
 

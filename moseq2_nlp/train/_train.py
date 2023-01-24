@@ -55,7 +55,6 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
     See also: `train_regressor, train_svm`
     """
 
-
     np.random.seed(seed)    
     save_dict = {}
     times = {'Preamble': 0.0, 'Data': 0.0, 'Features': 0.0, 'Classifier': 0.0}
@@ -130,9 +129,26 @@ def train(name: str, save_dir: str, data_path: str, representation: Representati
         df
         df.to_pickle(os.path.join(exp_dir, f'cm_{nm}.pkl'))
 
-    np.save(os.path.join(exp_dir, 'features.npy'), features)
-
 def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed: int, multi_class: Literal['auto', 'multi_class', 'ovr'], verbose: int=0):
+
+    """ Trains a Kfold cross-validated logistic regressor and returns fitted classifier
+
+        Args:
+            features: a sample x feature floating point numpy array of labeled data to be classified
+            labels: an iterable of integer labels for the samples
+            K: integer number of splits for cross validation
+            penalty: literal indicating which sort of regularization to use, `l1`, `l2` or `elasticnet``
+            num_c: integer number of regularizer constants to search over, logarithmically spaced between 1e-5 and 1e5
+            seed: integer random seed for the classifier initialization 
+            multi_class: literal indicating which multi-class scheme to use, `auto`, `multi_class` or `ovr`. See sklearn docs
+            verbose: integer controlling verbosity of classifier. Set to 0 for no messages. 
+
+        Returns:
+            LogisticRegressionCV: regressor object to features, labels
+
+        See also: 
+            train_svm, sklearn.linear_model.LogisticRegressionCV
+    """
     
     Cs = np.logspace(-5, 5, num_c)
     kf = KFold(n_splits=int(len(labels) / float(K)))
@@ -162,6 +178,24 @@ def train_regressor(features, labels, K: int, penalty: Penalty, num_c: int, seed
     return LogisticRegressionCV(**params).fit(features, labels)
 
 def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int, verbose: int=0):
+    """ Trains a Kfold cross-validated SVM and returns fitted classifier
+
+        Args:
+            features: a sample x feature floating point numpy array of labeled data to be classified
+            labels: an iterable of integer labels for the samples
+            K: integer number of splits for cross validation
+            penalty: literal indicating which sort of regularization to use, `l1`, `l2` or `elasticnet``
+            num_c: integer number of regularizer constants to search over, logarithmically spaced between 1e-5 and 1e5
+            seed: integer random seed for the classifier initialization 
+            verbose: integer controlling verbosity of classifier. Set to 0 for no messages. 
+
+        Returns:
+            GridSearchCV: abstract cross-validation object with SVM sub- object to features, labels
+
+        See also: 
+            train_regressor, sklearn.svm.SVC
+    """
+ 
 
     min_exemplars = min([len([lb for lb in labels if lb == l]) for l in np.unique(labels)])
     Cs = np.logspace(-5, 5, num_c)

@@ -112,7 +112,7 @@ def get_transition_representation(sentences: List[List[str]], num_transitions: i
         T = sorted_tm_vals[:,-1*num_transitions:]
     return T
 
-def get_embedding_representation(sentences: List[List[str]], bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, negative: int, model_dest: str, seed=0, return_syllable_embeddings=False):
+def get_embedding_representation(sentences: List[List[str]], bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, negative: int, model_dest: str, seed=0):
      """Compute embedding (doc2vec) representations. See https://radimrehurek.com/gensim/models/doc2vec.html
 
      Args:
@@ -135,10 +135,15 @@ def get_embedding_representation(sentences: List[List[str]], bad_syllables: List
      """
 
      # TODO: MAX SYLLABLE?
+     # TODO: inferrred doc vecs vs stored doc vecs???
 
      doc_embedding = DocumentEmbedding(dm=dm, embedding_dim=embedding_dim, embedding_window=embedding_window, embedding_epochs=embedding_epochs, min_count=min_count, negative=negative, seed=seed)
-     E = np.array(doc_embedding.fit_predict(sentences))
+     #E = np.array(doc_embedding.fit_predict(sentences)) <-- This was the old way. 
+     doc_embedding.fit(sentences)
+
      doc_embedding.save(model_dest)
+     E = doc_embedding.model.dv.vectors if dm < 2 else .5*(doc_embedding.model0.dv.vectors + doc_embedding.model1.dv.vectors) # <-- This is the new way. 
+         
      return E
 
 def get_emissions(sentences):
@@ -185,7 +190,19 @@ def get_raw(index_file: str, model_file: str, custom_groupings: List[str]):
     return sentences, labels
     
 def fit_markov_chain(syllables, k, max_syllable=100):
-    '''sample_markov_chain: using transition matrix `tmx`, sample from a markov chain `num_syllables` times'''
+    """sample_markov_chain: using transition matrix `tmx`, sample from a markov chain `num_syllables` times
+
+        Args: 
+            syllables: iterable of syllables
+            k: the order of the Markov chain
+            max_syllable: maximum syllable to include in the analysis
+
+        Returns:
+            mc: a markov chain object from which new samples can be drawn
+
+        See also:
+            MarkovChain
+    """
 
     syllable_array = np.array([int(s) for s in syllables])
     u, _ = get_syllable_statistics(syllable_array, max_syllable=max_syllable, count='usage')
