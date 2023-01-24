@@ -112,7 +112,7 @@ def get_transition_representation(sentences: List[List[str]], num_transitions: i
         T = sorted_tm_vals[:,-1*num_transitions:]
     return T
 
-def get_embedding_representation(sentences: List[List[str]], bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, negative: int, model_dest: str, seed=0):
+def get_embedding_representation(sentences: List[List[str]], bad_syllables: List[int], dm: Literal[0,1,2], embedding_dim: int, embedding_window: int, embedding_epochs: int, min_count: int, negative: int, model_dest: str, seed=0, return_syllable_embeddings=False):
      """Compute embedding (doc2vec) representations. See https://radimrehurek.com/gensim/models/doc2vec.html
 
      Args:
@@ -126,6 +126,7 @@ def get_embedding_representation(sentences: List[List[str]], bad_syllables: List
         negative: int indicating the exponent for negative sampling
         model_est: str indicating where model will be saved
         seed: int for random seed
+        return_syllable_embeddings: bool; if True, returns embeddings for individual syllables
 
      Returns:
          E: a num_animal x embedding_dim np.float32 array containing embedding representations for each animal
