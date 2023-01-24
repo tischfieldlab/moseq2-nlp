@@ -3,7 +3,7 @@ import itertools
 import os
 import sys
 import uuid
-from typing import Any, Callable, List, Literal, Protocol
+from typing import Any, Callable, List, Literal, Optional, Protocol
 
 import numpy as np
 import pandas as pd
@@ -36,10 +36,10 @@ def get_scan_values(scale: Literal['log', 'linear', 'list'], range: List, type='
 
 
 class CommandWrapper(Protocol):
-    def __call__(self, cmd: str, output: str=None, **kwds: Any) -> str: ...
+    def __call__(self, cmd: str, output: Optional[str]=None, **kwds: Any) -> str: ...
 
 
-def wrap_command_with_slurm(cmd: str, preamble: str, partition: str, ncpus: int, memory: str, wall_time: str, extra_params: str, output: str=None) -> str:
+def wrap_command_with_slurm(cmd: str, preamble: str, partition: str, ncpus: int, memory: str, wall_time: str, extra_params: str, output: Optional[str]=None) -> str:
     ''' Wraps a command to be run as a SLURM sbatch job
 
     Parameters:
@@ -87,7 +87,7 @@ def wrap_command_with_slurm(cmd: str, preamble: str, partition: str, ncpus: int,
     return f'{sbatch_cmd} --wrap "{preamble}{escaped_cmd}";'
 
 
-def wrap_command_with_local(cmd: str, output: str=None) -> str:
+def wrap_command_with_local(cmd: str, output: Optional[str]=None) -> str:
     ''' Wraps a command to be run locally. Admittedly, this does not do too much
 
     Parameters:

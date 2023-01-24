@@ -1,6 +1,6 @@
 import os
 import time
-from typing import List, Literal, Union
+from typing import List, Literal, Optional, Union
 
 import numpy as np
 from sklearn.svm import SVC
@@ -23,7 +23,7 @@ Penalty = Literal['l1', 'l2', 'elasticnet']
 
 def train(name: str, save_dir: str, data_path: str, representation: Representation, classifier: Classifier, emissions: bool,
         num_syllables: int, num_transitions: int, min_count: int, negative: int, dm: Literal[0,1,2], embedding_dim: int, embedding_window: int,
-          embedding_epochs: int, bad_syllables: List[int], test_size: float, K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed:int, split_seed:int=None, verbose:int=0):
+          embedding_epochs: int, bad_syllables: List[int], test_size: float, K: int, penalty: Penalty, num_c: int, multi_class: str, kernel: str, seed: int, split_seed: Optional[int]=None, verbose:int=0):
 
     """Compute animal features and train classifier. .
 
