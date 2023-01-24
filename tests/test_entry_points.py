@@ -17,18 +17,19 @@ def command_tree(obj):
 
 commands = list(command_tree(cli).keys())
 
+
 @pytest.mark.parametrize("entry_point", commands, ids=commands)
 def test_entry_point(entry_point):
-    os.environ['COVERAGE_PROCESS_START'] = '1'
-    rtn_code = subprocess.call(['moseq2-nlp', str(entry_point), '--help'])
+    os.environ["COVERAGE_PROCESS_START"] = "1"
+    rtn_code = subprocess.call(["moseq2-nlp", str(entry_point), "--help"])
     assert rtn_code == 0
-    os.environ.pop('COVERAGE_PROCESS_START')
+    os.environ.pop("COVERAGE_PROCESS_START")
 
 
-
-pkg_path = Path(__file__).resolve().parent.parent.joinpath('moseq2_nlp')
-modules_to_test = pkgutil.iter_modules([pkg_path], prefix='moseq2_nlp.')
+pkg_path = Path(__file__).resolve().parent.parent.joinpath("moseq2_nlp")
+modules_to_test = pkgutil.iter_modules([pkg_path], prefix="moseq2_nlp.")
 module_names = [m.name for m in modules_to_test]
+
 
 @pytest.mark.parametrize("module_path", module_names)
 def test_import(module_path):
