@@ -20,7 +20,7 @@ from moseq2_nlp.util import (IntChoice, command_with_config, ensure_dir,
                               get_command_defaults, write_yaml, get_unique_list_elements)
 from moseq2_viz.util import parse_index
 from moseq2_viz.model.util import parse_model_results
-from moseq2_nlp.visualize import visualizer
+from moseq2_nlp.visualize import plot_latent, animate_latent_path
 import pdb
 
 # Here we will monkey-patch click Option __init__
@@ -167,13 +167,14 @@ def moseq_to_raw(model_file, index_file, data_dir):
         fn = os.path.join(data_dir, f'{fn}.pkl')
         with open(fn, 'wb') as file:
             pickle.dump(dat,file)
-@cli.command(name="visualize", help="convert model and index file to raw sentences and labels")
+
+@cli.command(name="plot_latent", help="plot latent space of classified data (e.g. animals)")
 @click.argument("features_path", type=click.Path(exists=True))
 @click.argument("labels_path", type=click.Path(exists=True))
 @click.option("--method", type=click.Choice(['pca', 'tsne', 'umap']), default='pca')
 @click.option("--save_path", type=click.Path(exists=True), default='./z.png')
 @click.option("--perplexity", type=float, default=3.0)
-def visualize(features_path, labels_path, method, save_path, perplexity):
+def plot_latent(features_path, labels_path, method, save_path, perplexity):
 
     with open(features_path,'rb') as fn:
         X = pickle.load(fn)
@@ -181,7 +182,26 @@ def visualize(features_path, labels_path, method, save_path, perplexity):
     with open(labels_path,'rb') as fn:
         labels = pickle.load(fn)
 
-    visualizer(X, labels, method, save_path, perplexity=perplexity)
+    plot_latent(X, labels, method, save_path, perplexity=perplexity)
+
+@cli.command(name="animate_latent", help="animate path of unclassified data (e.g. syllables)")
+@click.argument("features_path", type=click.Path(exists=True))
+@click.argument("model-file", type=click.Path(exists=True))
+@click.argument("index-file", type=click.Path(exists=True))
+@click.argument("animal-index", type=int)
+@click.option("--method", type=click.Choice(['pca', 'tsne', 'umap']), default='pca')
+@click.option("--save_path", type=click.Path(exists=True), default='./z_anim.gif')
+@click.option("--perplexity", type=float, default=3.0)
+def plot_latent(features_path, model_file, index_file, method, save_path, perplexity):
+
+    with open(features_path,'rb') as fn:
+        X = pickle.load(fn)
+
+    sentences, _ = get_raw(model_file, index_file, custom_groupings)
+
+    sentence = sentence[animal_index]
+
+    animate_latent_path(X, sentence, method, save_path, perplexity=perplexity)
 
 if __name__ == '__main__':
     cli()

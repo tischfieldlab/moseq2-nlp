@@ -1,7 +1,88 @@
 import numpy as np
 from moseq2_nlp.util import get_unique_list_elements
 from gensim.models.phrases import original_scorer
+from brown_clustering import BigramCorpus, BrownClustering
 from tqdm import tqdm
+
+class BrownClusterer(object):
+     """Object consolidating methjods associated with Brown clustering. Clusters elements in a sequence according to neighborhood statistics. 
+     """
+
+    def make_corpus(self, sentences, alpha=0.0, min_count=0):
+        """Converts sentences to a bigram corpus object. 
+
+        Args:
+            sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. 
+            alpha: float controling degree of Laplacian smoothing. 
+            min_count: int indicating the minimum number of instances a syllable must have to be included in the corpus
+
+        Returns:
+            corpus: BigramCorpus object
+         """
+
+        corpus = BigramCorpus(sentences, alpha=alpha, min_count=min_count)
+
+        self.corpus = corpus
+        return corpus
+
+    def make_brown_tree(self, sentences, alpha=0.0, min_count=0):
+        """ Progressively clusters data into larger groups, aggregating each step into a binary tree. 
+
+        Args:
+            sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
+            alpha: float controling degree of Laplacian smoothing. 
+            min_count: int indicating the minimum number of instances a syllable must have to be included in the corpus
+        """
+
+        corpus = self.make_corpus(sentences, alpha=alpha, min_count=min_count)
+
+        num_vocab = len(corpus.vocabulary)
+
+        clustering = BrownClustering(corpus, m=num_vocab)
+
+        self.clustering = clustering
+
+        self.clustering.train()
+
+    def get_clusters_by_resolution(self, resolution):
+        """Returns a clustering of sentence data at a given depth of the Brown tree. Higher resolution means more clusters. 
+
+        Args:
+            resolution: level at which to read a clustering. Higher means more clusters. 
+
+        Returns: 
+            res_dict: dictionary which maps from a syllable name to its cluster id at the given resolution
+        """
+
+        if not hasattr(self,'clustering'):
+            raise ValueError('Sentences have not been clustered. Please run `cluster`.')
+
+        res_codes = [code[:resolution - 1] for code in self.clustering.codes().values()]
+        res_dict = {}
+
+        for res_code, (word, code) in zip(res_codes, self.clustering.codes().items()):
+            if res_code == code[:resolution-1]:
+                res_dict[word] = res_code
+
+        return res_dict
+
+def replace_words(sentences, replacement_dict):
+    """Replaces the symbols of a sentence according to the provided mapping. Can be used in conjunction with a phrasing algorithm to consolidate words into composite symbols. 
+
+        Args:
+            sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
+            replacement_dict: a dictionary which maps from the sentence syllable to new symbols.  
+
+        Returns: 
+            new_sentences: sentences with replaced symbols
+     """
+
+    new_sentences = []
+
+    for sentence in sentences:
+        new_sentence = [replacement_dict[word] for word in sentence]
+        new_sentences.append(new_sentence)
+    return new_sentences
 
 def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_count):
 
