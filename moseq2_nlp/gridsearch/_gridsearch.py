@@ -8,7 +8,7 @@ from typing import Any, Callable, List, Literal, Protocol
 import numpy as np
 import pandas as pd
 
-from moseq2_nlp.utils import ensure_dir, read_yaml, write_yaml
+from moseq2_nlp.util import ensure_dir, read_yaml, write_yaml
 import matplotlib.pyplot as plt
 import pdb
 
