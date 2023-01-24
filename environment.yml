@@ -1,4 +1,4 @@
-name: paws-tools
+name: moseq2-nlp
 
 dependencies:
   - python>=3.8,<=3.9
