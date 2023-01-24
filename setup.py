@@ -10,6 +10,7 @@ setup(
     python_requires='>=3.8',
     install_requires=[
         'numpy>=1.21',
+        'brown-clustering',
         'tqdm',
         'notebook',
         'gensim==4.0.1',
