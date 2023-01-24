@@ -1,6 +1,8 @@
 import os
 import sys
 from functools import partial
+import pickle
+from typing import List
 
 import click
 from click_option_group import optgroup
@@ -8,17 +10,17 @@ from numpy.random import choice, randint
 from tqdm import tqdm
 
 import moseq2_nlp.train as trainer
-from moseq2_nlp.data import get_raw_data, make_phrases_dataset
+from moseq2_nlp.data import make_phrases_dataset
 from moseq2_nlp.gridsearch import (find_gridsearch_results,
                                    generate_grid_search_worker_params,
                                    get_gridsearch_default_scans,
                                    wrap_command_with_local,
                                    wrap_command_with_slurm, write_jobs)
-from moseq2_nlp.utils import (IntChoice, command_with_config, ensure_dir,
-                              get_command_defaults, write_yaml)
+from moseq2_nlp.util import (IntChoice, command_with_config, ensure_dir,
+                              get_command_defaults, write_yaml, get_unique_list_elements)
 from moseq2_viz.util import parse_index
 from moseq2_viz.model.util import parse_model_results
-from moseq2_nlp.visualize import make_wordcloud
+from moseq2_nlp.visualize import plot_latent, animate_latent_path
 import pdb
 
 # Here we will monkey-patch click Option __init__
@@ -39,13 +41,11 @@ def cli():
 @cli.command(name='train', cls=command_with_config('config_file'), help='train a classifier')
 @click.option('--name', type=str)
 @click.option('--save-dir', type=str, default=os.getcwd())
-@click.option('--model-path', type=click.Path(exists=True))
-@click.option('--index-path', type=click.Path(exists=True))
+@click.option('--data-path', type=click.Path(exists=True))
 @click.option('--representation', type=click.Choice(['embeddings', 'usages', 'transitions']), default='embeddings')
 @click.option('--classifier', type=click.Choice(['logistic_regressor', 'svm']), default='logistic_regressor')
 @click.option('--kernel', type=click.Choice(['linear', 'poly', 'rbf', 'sigmoid']), default='rbf')
 @click.option('--emissions', is_flag=True)
-@click.option('--custom-groupings', type=str, multiple=True, default=[])
 @click.option('--num-syllables', type=int, default=70)
 @click.option('--num-transitions', type=int, default=300)
 @click.option('--min-count', type=int, default=1)
@@ -64,9 +64,9 @@ def cli():
 @click.option('--split-seed', type=int, default=0)
 @click.option('--verbose', type=int, default=0)
 @click.option('--config-file', type=click.Path())
-def train(name, save_dir, model_path, index_path, representation, classifier, kernel, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
+def train(name, save_dir, data_path, representation, classifier, kernel, emissions, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, seed, split_seed, verbose, config_file):
-    trainer.train(name, save_dir, model_path, index_path, representation, classifier, emissions, custom_groupings, num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
+    trainer.train(name, save_dir, data_path, representation, classifier, emissions,  num_syllables, num_transitions, min_count, negative, dm, embedding_dim, embedding_window,
           embedding_epochs, bad_syllables, test_size, k, penalty, num_c, multi_class, kernel, seed, split_seed, verbose)
 
 @cli.command(name="generate-train-config", help="Generates a configuration file that holds editable options for training parameters.")
@@ -76,69 +76,23 @@ def generate_train_config(output_file):
     write_yaml(output_file, get_command_defaults(train))
     print(f'Successfully generated train config file at "{output_file}".')
 
-
-@cli.command(name="make-random-documents", help="Splits frames or emissions into sentences of random lengths and keeps track of which sentences belong to what class.")
-@click.option('--model-path', type=str, default='/cs/usr/ricci/data/abraira/robust_septrans_model_20min_1000.p')
-@click.option('--index-path', type=str, default='/cs/usr/ricci/data/abraira/moseq2-index.sex-genotype.20min.yaml')
-@click.option('--splits',type=(float, float, float), default=(.4,.2,.4))
-@click.option('--min-length', type=int, default=4)
-@click.option('--max-length', type=int, default=32)
-@click.option('--save-dir', type=str, default='/cs/usr/ricci/data/abraira/docs')
-@click.option('--emissions', is_flag=True)
-def make_random_documents(model_path, index_path, splits, min_length, max_length, save_dir, emissions):
-    print(f'Gathering raw data for model "{model_path}".')
-    sentences, out_groups = get_raw_data(model_path, index_path, emissions=emissions)
-
-    fn_train = os.path.join(save_dir, 'ptb.train.txt')
-    fn_val = os.path.join(save_dir, 'ptb.valid.txt')
-    fn_test = os.path.join(save_dir, 'ptb.test.txt')
-    
-    labels_train = os.path.join(save_dir, 'train_labels.txt')
-    labels_val = os.path.join(save_dir, 'valid_labels.txt')
-    labels_test  = os.path.join(save_dir, 'test_labels.txt')
-
-    print('Generating random documents.')
-    with open(fn_train, 'w') as f1,  open(fn_val, 'w') as f2, open(fn_test, 'w') as f3, open(labels_train, 'w') as f4, open(labels_val, 'w') as f5, open(labels_test, 'w') as f6:
-        for s, sentence in tqdm(enumerate(sentences)):
-            counter = 0
-            while counter < len(sentence):
-                L = min(randint(min_length, high=max_length), len(sentence) - counter)
-                snippet = ' '.join(sentence[counter:counter + L])
-                counter += L
-                which_doc = choice([f1, f2, f3],p=splits)
-
-                if 'train' in which_doc.name:
-                    which_lab = f4
-                elif 'valid' in which_doc.name:
-                    which_lab = f5
-                else: 
-                    which_lab = f6
-
-                which_doc.write(snippet)
-                which_doc.write('\n')
-                which_lab.write(out_groups[s])
-                which_lab.write('\n')
-    
-    print(f'Successfully generated random train/test documents at "{save_dir}".')
-
-
 @cli.command(name='make-phrases', help='finds and saves compound modules')
-@click.argument('model-path', type=click.Path(exists=True))
-@click.argument('index-path', type=click.Path(exists=True))
-@click.option('--save-path', type=click.Path(), default='./all_phrases.pickle')
-@click.option('--threshes', type=float, multiple=True, default=[.01,.01])
+@click.argument('data-path', type=click.Path(exists=True))
+@click.option('--save-path', type=click.Path(), default='./all_phrases.pkl')
+@click.option('--threshes', type=float, multiple=True, default=[.001,.001])
 @click.option('--n', type=int, default=2)
 @click.option('--min-count', type=int, default=2)
-@click.option('--visualize', is_flag=True)
-@click.option('--wordcloud-path', type=click.Path(), default='.')
-@click.option('--max-plot', type=int, default=15)
-def make_phrases(model_path, index_path, save_path, wordcloud_path, threshes, n, min_count, visualize, max_plot):
 
-    #make_phrases_dataset(model_path, index_path, save_path, threshes, n, min_count)
-    if visualize:
-        print('Making word cloud')
-        make_wordcloud(save_path, wordcloud_path, max_plot=max_plot)
+def make_phrases(data_path, save_path, wordcloud_path, threshes, n, min_count, visualize, max_plot):
 
+    with open(os.path.join(data_path,'sentences.pkl'),'rb') as fn:
+        sentences = pickle.load(fn)
+
+    with open(os.path.join(data_path,'labels.pkl'),'rb') as fn:
+        labels = pickle.load(fn)
+
+    make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count)
+    
 @cli.command(name='grid-search', help='grid search hyperparameters')
 @click.argument("scan_file", type=click.Path(exists=True))
 @click.option('--save-dir', type=click.Path(), default=os.path.join(os.getcwd(), 'worker-configs'), help="Directory to save worker configurations")
@@ -197,6 +151,57 @@ def aggregate_gridsearch_results(results_directory, best_key):
     print('Best model:')
     print(results.iloc[0])
 
+@cli.command(name="moseq-to-raw", help="convert model and index file to raw sentences and labels")
+@click.argument("model-file", type=click.Path(exists=True))
+@click.argument("index-file", type=click.Path(exists=True))
+@click.option("--data-dir", type=str, default='.')
+@click.option('--custom-groupings', type=str, multiple=True, default=[])
+def moseq_to_raw(model_file, index_file, data_dir):
+
+    ensure_dir(data_dir)
+
+    sentences, labels = get_raw(model_file, index_file, custom_groupings)
+    unique_labels = get_unique_list_elements(labels)
+
+    for dat, fn in zip([sentences, labels],['sentences', 'labels']):
+        fn = os.path.join(data_dir, f'{fn}.pkl')
+        with open(fn, 'wb') as file:
+            pickle.dump(dat,file)
+
+@cli.command(name="plot_latent", help="plot latent space of classified data (e.g. animals)")
+@click.argument("features_path", type=click.Path(exists=True))
+@click.argument("labels_path", type=click.Path(exists=True))
+@click.option("--method", type=click.Choice(['pca', 'tsne', 'umap']), default='pca')
+@click.option("--save_path", type=click.Path(exists=True), default='./z.png')
+@click.option("--perplexity", type=float, default=3.0)
+def plot_latent(features_path, labels_path, method, save_path, perplexity):
+
+    with open(features_path,'rb') as fn:
+        X = pickle.load(fn)
+
+    with open(labels_path,'rb') as fn:
+        labels = pickle.load(fn)
+
+    plot_latent(X, labels, method, save_path, perplexity=perplexity)
+
+@cli.command(name="animate_latent", help="animate path of unclassified data (e.g. syllables)")
+@click.argument("features_path", type=click.Path(exists=True))
+@click.argument("model-file", type=click.Path(exists=True))
+@click.argument("index-file", type=click.Path(exists=True))
+@click.argument("animal-index", type=int)
+@click.option("--method", type=click.Choice(['pca', 'tsne', 'umap']), default='pca')
+@click.option("--save_path", type=click.Path(exists=True), default='./z_anim.gif')
+@click.option("--perplexity", type=float, default=3.0)
+def plot_latent(features_path, model_file, index_file, method, save_path, perplexity):
+
+    with open(features_path,'rb') as fn:
+        X = pickle.load(fn)
+
+    sentences, _ = get_raw(model_file, index_file, custom_groupings)
+
+    sentence = sentence[animal_index]
+
+    animate_latent_path(X, sentence, method, save_path, perplexity=perplexity)
 
 if __name__ == '__main__':
     cli()

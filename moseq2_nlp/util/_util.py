@@ -167,3 +167,18 @@ def ensure_dir(path: str) -> str:
             if exception.errno != errno.EEXIST:
                 raise
     return path
+
+def get_unique_list_elements(lst):
+    """Returns unique elements from list
+       
+        Args:
+            lst: the list
+
+        Returns: 
+            unique_elements: the unique elements
+    """
+    unique_elements = []
+    for el in lst:
+        if el not in unique_elements:
+            unique_elements.append(el)
+    return unique_elements
