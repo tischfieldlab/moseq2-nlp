@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 import pdb
 
 
-def get_scan_values(scale: Literal['log', 'linear', 'list'], range: List, type='float') -> List:
-    ''' Generate concrete scan values given a scan specification
+def get_scan_values(scale: Literal["log", "linear", "list"], range: List, type="float") -> List:
+    """Generate concrete scan values given a scan specification
 
     Parameters:
         scale (Literal['log', 'linear', 'list']): type of scale to scan.
@@ -23,24 +23,27 @@ def get_scan_values(scale: Literal['log', 'linear', 'list'], range: List, type='
 
     Returns:
         (List): List of values to scan over
-    '''
-    if scale == 'list':
+    """
+    if scale == "list":
         return np.array(range).astype(type).tolist()
-    elif scale == 'linear':
+    elif scale == "linear":
         return np.linspace(*range).astype(type).tolist()
-    elif scale == 'log':
+    elif scale == "log":
         ls_args = [np.log10(x) if i < 2 else x for i, x in enumerate(range)]
         return np.logspace(*ls_args).astype(type).tolist()
     else:
-        raise ValueError(f'Unknown scale {scale}')
+        raise ValueError(f"Unknown scale {scale}")
 
 
 class CommandWrapper(Protocol):
-    def __call__(self, cmd: str, output: Optional[str]=None, **kwds: Any) -> str: ...
+    def __call__(self, cmd: str, output: Optional[str] = None, **kwds: Any) -> str:
+        ...
 
 
-def wrap_command_with_slurm(cmd: str, preamble: str, partition: str, ncpus: int, memory: str, wall_time: str, extra_params: str, output: Optional[str]=None) -> str:
-    ''' Wraps a command to be run as a SLURM sbatch job
+def wrap_command_with_slurm(
+    cmd: str, preamble: str, partition: str, ncpus: int, memory: str, wall_time: str, extra_params: str, output: Optional[str] = None
+) -> str:
+    """Wraps a command to be run as a SLURM sbatch job
 
     Parameters:
         cmd (str): Command to be wrapped
@@ -54,11 +57,11 @@ def wrap_command_with_slurm(cmd: str, preamble: str, partition: str, ncpus: int,
 
     Returns:
         (str): the slurm wrapped command
-    '''
+    """
     # setup basic parameters for slurm's `sbatch` command:
     #   important to set --nodes to 1 and --ntasks-per-node to one 1 or
     #   the multiple --cpus-per-task may be split over multiple nodes!
-    sbatch_cmd = f'sbatch --partition {partition} --nodes 1 --ntasks-per-node 1 --cpus-per-task {ncpus} --mem {memory} --time {wall_time}'
+    sbatch_cmd = f"sbatch --partition {partition} --nodes 1 --ntasks-per-node 1 --cpus-per-task {ncpus} --mem {memory} --time {wall_time}"
 
     # if the user requests job log output to a file, set that up
     if output is not None:
@@ -66,29 +69,29 @@ def wrap_command_with_slurm(cmd: str, preamble: str, partition: str, ncpus: int,
 
     # if any extra params for slurm, add them
     if len(extra_params) > 0:
-        sbatch_cmd += f' {extra_params}'
+        sbatch_cmd += f" {extra_params}"
 
     if len(preamble) > 0:
         # if preamble does not end with semicolon, add one to separate from main command
-        if not preamble.endswith(';'):
-            preamble = preamble + '; '
+        if not preamble.endswith(";"):
+            preamble = preamble + "; "
 
         # ensure there is a space separating preamble from main command
-        if not preamble.endswith(' '):
-            preamble = preamble + ' '
+        if not preamble.endswith(" "):
+            preamble = preamble + " "
 
         # escape any quotes within the preamble
-        preamble = preamble.replace('"', r'\"')
+        preamble = preamble.replace('"', r"\"")
 
     # escape any quotes in the command
-    escaped_cmd = cmd.replace('"', r'\"')
+    escaped_cmd = cmd.replace('"', r"\"")
 
     # put it all togher and return the final wrapped command
     return f'{sbatch_cmd} --wrap "{preamble}{escaped_cmd}";'
 
 
-def wrap_command_with_local(cmd: str, output: Optional[str]=None) -> str:
-    ''' Wraps a command to be run locally. Admittedly, this does not do too much
+def wrap_command_with_local(cmd: str, output: Optional[str] = None) -> str:
+    """Wraps a command to be run locally. Admittedly, this does not do too much
 
     Parameters:
         cmd (str): Command to be wrapped
@@ -96,7 +99,7 @@ def wrap_command_with_local(cmd: str, output: Optional[str]=None) -> str:
 
     Returns:
         (str): the wrapped command
-    '''
+    """
     if output is not None:
         return cmd
     else:
@@ -104,7 +107,7 @@ def wrap_command_with_local(cmd: str, output: Optional[str]=None) -> str:
 
 
 def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
-    ''' Given a path to YAML scan configuration file, read the contents
+    """Given a path to YAML scan configuration file, read the contents
         and generate a dictionary for each implied job
 
     Parameters:
@@ -112,20 +115,20 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
 
     Returns:
         (List[dict]): a list of dicts, each dict containing parameters to a single job
-    '''
+    """
     scan_settings = read_yaml(scan_file)
 
-    base_parameters = scan_settings['parameters']
-    scans = scan_settings['scans']
+    base_parameters = scan_settings["parameters"]
+    scans = scan_settings["scans"]
 
     worker_dicts = []
     for scan in scans:
 
         scan_param_products = []
-        if 'scan' in scan:
+        if "scan" in scan:
             scan_param_gens = {}
-            for sp in scan['scan']:
-                scan_param_gens[sp['parameter']] = get_scan_values(sp['scale'], sp['range'], sp['type'])
+            for sp in scan["scan"]:
+                scan_param_gens[sp["parameter"]] = get_scan_values(sp["scale"], sp["range"], sp["type"])
 
             for params in itertools.product(*scan_param_gens.values()):
                 scan_param_products.append(dict(zip(scan_param_gens.keys(), params)))
@@ -134,11 +137,10 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
             # even though we dont have any iterable parameters
             scan_param_products.append({})
 
-        if 'parameters' in scan:
-            scan_base_params = scan['parameters']
+        if "parameters" in scan:
+            scan_base_params = scan["parameters"]
         else:
             scan_base_params = {}
-
 
         for spp in scan_param_products:
             # scan-specific params, combo of static and dynamic
@@ -147,8 +149,8 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
             final_params = {**base_parameters, **scan_params}
 
             # rename the job, based on the specific params
-            name_suffix = '_'.join([f'{k}-{v}' for k, v in scan_params.items()])
-            final_params['name'] = f"{final_params['name']}_{name_suffix}"
+            name_suffix = "_".join([f"{k}-{v}" for k, v in scan_params.items()])
+            final_params["name"] = f"{final_params['name']}_{name_suffix}"
 
             worker_dicts.append(final_params)
 
@@ -156,83 +158,53 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
 
 
 def write_jobs(worker_dicts: List[dict], cluster_format: CommandWrapper, dest_dir: str) -> None:
-    ''' Write job configurations to YAML files, and write job invocations to stdout
+    """Write job configurations to YAML files, and write job invocations to stdout
 
     Parameters:
         worker_dicts (List[dict]): Job configurations to write
         cluster_format (Callable[[str], str]): A callable to format the job invoation for a given environment
         dest_dir (str): directory to write job configurations to
-    '''
+    """
     for worker in worker_dicts:
         worker_dest = os.path.join(dest_dir, f"{worker['name']}.yaml")
         write_yaml(worker_dest, worker)
 
-        ensure_dir(worker['save_dir'])
-        output = os.path.join(worker['save_dir'], f"{worker['name']}.log")
+        ensure_dir(worker["save_dir"])
+        output = os.path.join(worker["save_dir"], f"{worker['name']}.log")
 
         work_cmd = f'moseq2-nlp train --config-file "{worker_dest}";'
         full_cmd = cluster_format(work_cmd, output=output)
 
-        sys.stdout.write(full_cmd+'\n')
+        sys.stdout.write(full_cmd + "\n")
 
 
 def get_gridsearch_default_scans() -> List:
-    ''' Generate default scan configuration
-    '''
+    """Generate default scan configuration"""
     return [
-    {
-        'parameters': {
-            'representation': 'usages'
-        }
-    }, {
-        'parameters': {
-            'representation': 'transitions'
+        {"parameters": {"representation": "usages"}},
+        {
+            "parameters": {"representation": "transitions"},
+            "scan": [{"parameter": "num_transitions", "type": "int", "scale": "log", "range": [70, 4900, 8]}],
         },
-        'scan': [
-            {
-                'parameter': 'num_transitions',
-                'type': 'int',
-                'scale': 'log',
-                'range': [70, 4900, 8]
-            }
-        ]
-    }, {
-        'parameters': {
-            'representation': 'embeddings'
+        {
+            "parameters": {"representation": "embeddings"},
+            "scan": [
+                {"parameter": "emissions", "type": "bool", "scale": "list", "range": [True, False]},
+                {"parameter": "embedding_window", "type": "int", "scale": "list", "range": [2, 4, 8, 16, 32, 64]},
+                {"parameter": "embedding_dim", "type": "int", "scale": "log", "range": [70, 4900, 8]},
+                {"parameter": "embedding_epochs", "type": "int", "scale": "list", "range": [50, 100, 150, 200, 250]},
+            ],
         },
-        'scan': [
-            {
-                'parameter': 'emissions',
-                'type': 'bool',
-                'scale': 'list',
-                'range': [True, False]
-            }, {
-                'parameter': 'embedding_window',
-                'type': 'int',
-                'scale': 'list',
-                'range': [2, 4, 8, 16, 32, 64]
-            }, {
-                'parameter': 'embedding_dim',
-                'type': 'int',
-                'scale': 'log',
-                'range': [70, 4900, 8]
-            }, {
-                'parameter': 'embedding_epochs',
-                'type': 'int',
-                'scale': 'list',
-                'range': [50, 100, 150, 200, 250]
-            }
-        ]
-    }]
+    ]
 
 
 def find_gridsearch_results(path: str) -> pd.DataFrame:
-    ''' Find and aggregate grid search results
+    """Find and aggregate grid search results
 
     Parameters:
         path (str): path to search for experiments
-    '''
-    experiments = glob.glob(os.path.join(path, '*', 'experiment_info.yaml'))
+    """
+    experiments = glob.glob(os.path.join(path, "*", "experiment_info.yaml"))
 
     exp_data = []
     for exp in experiments:
@@ -240,36 +212,32 @@ def find_gridsearch_results(path: str) -> pd.DataFrame:
         data = read_yaml(exp)
 
         # tag each dict with the model ID
-        time_data = {f'time_{k}': v for (k, v) in data['compute_times'].items()}
-        exp_data.append({
-            'id': id,
-            **data['parameters'],
-            **time_data,
-            **data['model_performance']
-        })
+        time_data = {f"time_{k}": v for (k, v) in data["compute_times"].items()}
+        exp_data.append({"id": id, **data["parameters"], **time_data, **data["model_performance"]})
 
     return pd.DataFrame(exp_data)
 
 
-def get_best_model(path:str, key='best_accuracy'):
-    '''Finds and returns the best model according to a particular measure
-    
-    Parameters: 
+def get_best_model(path: str, key="best_accuracy"):
+    """Finds and returns the best model according to a particular measure
+
+    Parameters:
         path (str): path to search for experiments
-        key (sr): measure by which to rank experiments'''
+        key (sr): measure by which to rank experiments"""
 
     df = find_gridsearch_results(path).sort_values(key, ascending=False)
     return df.iloc[0]
 
+
 def observe_gs_variation(path: str, representation_name: str, dep_var_name: str, ind_var_name: str):
     df = find_gridsearch_results(path)
-    current_df = df.loc[df['representation'] == representation_name]
+    current_df = df.loc[df["representation"] == representation_name]
     dep_var = current_df[dep_var_name].values
     ind_var = current_df[ind_var_name]
 
-    fig, ax = plt.subplots(figsize=(12,6))
+    fig, ax = plt.subplots(figsize=(12, 6))
     ax.scatter(ind_var, dep_var)
-    ax.set_title(f'{ind_var_name}, vs {dep_var_name}. Rep: {representation_name}')
+    ax.set_title(f"{ind_var_name}, vs {dep_var_name}. Rep: {representation_name}")
     ax.set_xlabel(ind_var_name)
     ax.set_ylabel(dep_var_name)
     plt.show()

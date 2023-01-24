@@ -11,7 +11,7 @@ from click.shell_completion import CompletionItem
 # from https://stackoverflow.com/questions/46358797/
 # python-click-supply-arguments-and-options-from-a-configuration-file
 def command_with_config(config_file_param_name: str) -> Type[click.Command]:
-    ''' Create and return a class inheriting `click.Command` which accepts a configuration file
+    """Create and return a class inheriting `click.Command` which accepts a configuration file
         containing arguments/options accepted by the command.
 
         The returned class should be passed to the `@click.Commnad` parameter `cls`:
@@ -25,15 +25,13 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
 
     Returns:
         class (Type[click.Command]): Class to use when constructing a new click.Command
-    '''
+    """
 
     class custom_command_class(click.Command):
-
         def invoke(self, ctx):
             # grab the config file
             config_file = ctx.params[config_file_param_name]
-            param_defaults = {p.human_readable_name: p.default for p in self.params
-                              if isinstance(p, click.core.Option)}
+            param_defaults = {p.human_readable_name: p.default for p in self.params if isinstance(p, click.core.Option)}
             param_defaults = {k: tuple(v) if type(v) is list else v for k, v in param_defaults.items()}
             param_cli = {k: tuple(v) if type(v) is list else v for k, v in ctx.params.items()}
 
@@ -41,8 +39,11 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
 
                 config_data = read_yaml(config_file)
                 # modified to only use keys that are actually defined in options
-                config_data = {k: tuple(v) if isinstance(v, yaml.comments.CommentedSeq) else v
-                               for k, v in config_data.items() if k in param_defaults.keys()}
+                config_data = {
+                    k: tuple(v) if isinstance(v, yaml.comments.CommentedSeq) else v
+                    for k, v in config_data.items()
+                    if k in param_defaults.keys()
+                }
 
                 # find differences btw config and param defaults
                 diffs = set(param_defaults.items()) ^ set(param_cli.items())
@@ -63,8 +64,7 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
 
 
 def get_command_defaults(command: click.Command):
-    ''' Get the defualt values for the options of `command`
-    '''
+    """Get the defualt values for the options of `command`"""
     return {tmp.name: tmp.default for tmp in command.params if not tmp.required}
 
 
@@ -92,17 +92,13 @@ class IntChoice(click.ParamType):
     def get_missing_message(self, param: click.Parameter) -> str:
         return gettext("Choose from:\n\t{choices}").format(choices=",\n\t".join([str(c) for c in self.choices]))
 
-    def convert(
-        self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]
-    ) -> Any:
+    def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> Any:
         return int(str(value))
 
     def __repr__(self) -> str:
         return f"Choice({list([str(c) for c in self.choices])})"
 
-    def shell_complete(
-        self, ctx: click.Context, param: click.Parameter, incomplete: str
-    ) -> List[CompletionItem]:
+    def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> List[CompletionItem]:
         """Complete choices that start with the incomplete value.
 
         :param ctx: Invocation context for this command.
@@ -121,41 +117,41 @@ class IntChoice(click.ParamType):
 
 
 def read_yaml(yaml_file: str) -> dict:
-    ''' Read a yaml file into dict object
+    """Read a yaml file into dict object
 
     Parameters:
         yaml_file (str): path to yaml file
 
     Returns:
         return_dict (dict): dict of yaml contents
-    '''
-    with open(yaml_file, 'r') as f:
-        yml = yaml.YAML(typ='safe')
+    """
+    with open(yaml_file, "r") as f:
+        yml = yaml.YAML(typ="safe")
         return yml.load(f)
 
 
 def write_yaml(yaml_file: str, data: dict) -> None:
-    ''' Write a dict object into a yaml file
+    """Write a dict object into a yaml file
 
     Parameters:
         yaml_file (str): path to yaml file
         data (dict): dict of data to write to `yaml_file`
-    '''
-    with open(yaml_file, 'w') as f:
-        yml = yaml.YAML(typ='safe')
+    """
+    with open(yaml_file, "w") as f:
+        yml = yaml.YAML(typ="safe")
         yml.default_flow_style = False
         yml.dump(data, f)
 
 
 def ensure_dir(path: str) -> str:
-    ''' Creates the directories specified by path if they do not already exist.
+    """Creates the directories specified by path if they do not already exist.
 
     Parameters:
         path (str): path to directory that should be created
 
     Returns:
         return_path (str): path to the directory that now exists
-    '''
+    """
     path = os.path.abspath(path)
     if not os.path.exists(path):
         try:
@@ -168,14 +164,15 @@ def ensure_dir(path: str) -> str:
                 raise
     return path
 
+
 def get_unique_list_elements(lst):
     """Returns unique elements from list
-       
-        Args:
-            lst: the list
 
-        Returns: 
-            unique_elements: the unique elements
+    Args:
+        lst: the list
+
+    Returns:
+        unique_elements: the unique elements
     """
     unique_elements = []
     for el in lst:
