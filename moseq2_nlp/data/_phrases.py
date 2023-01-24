@@ -19,7 +19,6 @@ class BrownClusterer(object):
         Returns:
             corpus: BigramCorpus object
         """
-
         corpus = BigramCorpus(sentences, alpha=alpha, min_count=min_count)
 
         self.corpus = corpus
@@ -33,7 +32,6 @@ class BrownClusterer(object):
             alpha: float controling degree of Laplacian smoothing.
             min_count: int indicating the minimum number of instances a syllable must have to be included in the corpus
         """
-
         corpus = self.make_corpus(sentences, alpha=alpha, min_count=min_count)
 
         num_vocab = len(corpus.vocabulary)
@@ -53,7 +51,6 @@ class BrownClusterer(object):
         Returns:
             res_dict: dictionary which maps from a syllable name to its cluster id at the given resolution
         """
-
         if not hasattr(self, "clustering"):
             raise ValueError("Sentences have not been clustered. Please run `cluster`.")
 
@@ -77,7 +74,6 @@ def replace_words(sentences, replacement_dict):
     Returns:
         new_sentences: sentences with replaced symbols
     """
-
     new_sentences = []
 
     for sentence in sentences:
@@ -87,8 +83,7 @@ def replace_words(sentences, replacement_dict):
 
 
 def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_count):
-
-    """score_phrases: assigns a score to each bigram in the foreground sequences based on Mikilov et al., 2013
+    """score_phrases: assigns a score to each bigram in the foreground sequences based on Mikilov et al., 2013.
 
     Positional args:
         foreground_seqs (list): a list of sequences from which significant phrases are extracted
@@ -96,7 +91,6 @@ def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_coun
         foreground_bigrams (list): a list of precomputed bigrams in the foreground sequences
         min_count (int): minimum number of times a phrase has to appear to be considered for significance
     """
-
     # Unique elements in foreground seqs
     unique_foreground_els = get_unique_list_elements(foreground_seqs)
 
@@ -121,8 +115,7 @@ def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_coun
 
 
 def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
-
-    """make_phrases: makes a dictionary containing disciminating phrases for a given class
+    """make_phrases: makes a dictionary containing disciminating phrases for a given class.
 
     Positional args:
         foreground_seqs (list): a list of sequences from which significant phrases are extracted
@@ -131,7 +124,6 @@ def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
         n (int): number of times to run the agglomeration algorithm. Running n times will potentially yield up to 2n-grams
         min_count (int): minimum number of times a phrase has to appear to be considered for significance
     """
-
     # Flatten list of sequences into one long sequence (introduces artifacts?)
     flat_foreground_seqs = [el for seq in foreground_seqs for el in seq]
     flat_background_seqs = [el for seq in background_seqs for el in seq]
@@ -178,8 +170,7 @@ def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
 
 
 def make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count):
-
-    """make_phrases_dataset: makes a dictionary containing disciminating phrases for each class in a dataset
+    """make_phrases_dataset: makes a dictionary containing disciminating phrases for each class in a dataset.
 
     Positional args:
         sentences (List of strs): list of sentences representing moseq emissions

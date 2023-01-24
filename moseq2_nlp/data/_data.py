@@ -24,7 +24,7 @@ def load_groups(index_file: str, custom_groupings: List[str]) -> Dict[str, str]:
         A dictionary mapping from subgroup (key) to supergroup (value)
         and dtype `float32`.
 
-    See also: `get_raw`
+    See Also: `get_raw`
     """
     # Get group names available in model
     _, sorted_index = parse_index(index_file)
@@ -68,9 +68,8 @@ def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_
         U: The usage representation of all animals in the form of an animal x max_syllable np.float32 array; i.e. a normalized histogram of syllable counts.
            Syllables are sorted by frequency
 
-    See also: `get_raw, get transition_representation, get_embedding_representation`
+    See Also: `get_raw, get transition_representation, get_embedding_representation`
     """
-
     U = []
     for sentence in sentences:
         sentence = np.array([int(s) for s in sentence if s not in bad_syllables])
@@ -95,7 +94,7 @@ def get_transition_representation(sentences: List[List[str]], num_transitions: i
         T: The transition representation of all animals in the form of an animal x num_transitoin np.float32 array; i.e. truncated and flattened transition matrix,
         first normalized by row and column.
 
-    See also: `get_raw, get usage_representation, get_embedding_representation`
+    See Also: `get_raw, get usage_representation, get_embedding_representation`
     """
     tm_vals = []
     for sentence in sentences:
@@ -130,7 +129,9 @@ def get_embedding_representation(
     model_dest: str,
     seed=0,
 ):
-    """Compute embedding (doc2vec) representations. See https://radimrehurek.com/gensim/models/doc2vec.html
+    """Compute embedding (doc2vec) representations.
+
+    See https://radimrehurek.com/gensim/models/doc2vec.html
 
     Args:
        sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
@@ -148,9 +149,8 @@ def get_embedding_representation(
     Returns:
         E: a num_animal x embedding_dim np.float32 array containing embedding representations for each animal
 
-    See also: `get_raw, get usage_representation, get_transition_representation`
+    See Also: `get_raw, get usage_representation, get_transition_representation`
     """
-
     # TODO: MAX SYLLABLE?
     # TODO: inferrred doc vecs vs stored doc vecs???
 
@@ -175,7 +175,7 @@ def get_embedding_representation(
 
 
 def get_emissions(sentences):
-    """Convert a sequence of raw syllables to a sequence of emissions
+    """Convert a sequence of raw syllables to a sequence of emissions.
 
     Args:
         sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
@@ -192,8 +192,7 @@ def get_emissions(sentences):
 
 
 def get_raw(index_file: str, model_file: str, custom_groupings: List[str]):
-
-    """Load raw syllables and labels from a moseq model
+    """Load raw syllables and labels from a moseq model.
 
     Args:
         index_file: yaml file indexing moseq data.
@@ -205,7 +204,6 @@ def get_raw(index_file: str, model_file: str, custom_groupings: List[str]):
         labels: labels for each animal's syllables. Labels possibly consolidated into supergroups by custom labels
 
     """
-
     _, sorted_index = parse_index(index_file)
     model = parse_model_results(model_file, sort_labels_by_usage=True, count="usage")
     sentences = model["labels"]
@@ -220,7 +218,7 @@ def get_raw(index_file: str, model_file: str, custom_groupings: List[str]):
 
 
 def fit_markov_chain(syllables, k, max_syllable=100):
-    """sample_markov_chain: using transition matrix `tmx`, sample from a markov chain `num_syllables` times
+    """sample_markov_chain: using transition matrix `tmx`, sample from a markov chain `num_syllables` times.
 
     Args:
         syllables: iterable of syllables
@@ -230,10 +228,9 @@ def fit_markov_chain(syllables, k, max_syllable=100):
     Returns:
         mc: a markov chain object from which new samples can be drawn
 
-    See also:
+    See Also:
         MarkovChain
     """
-
     syllable_array = np.array([int(s) for s in syllables])
     u, _ = get_syllable_statistics(syllable_array, max_syllable=max_syllable, count="usage")
     u_vals = list(u.values())

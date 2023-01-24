@@ -55,7 +55,6 @@ def train(
     split_seed: Optional[int] = None,
     verbose: int = 0,
 ):
-
     """Compute animal features and train classifier. .
 
     Args:
@@ -83,9 +82,8 @@ def train(
         split_seed: int, random seed for the train-test split
         verbose: int controling verbosity of sklearn classifiers
 
-    See also: `train_regressor, train_svm`
+    See Also: `train_regressor, train_svm`
     """
-
     np.random.seed(seed)
     save_dict = {}
     times = {"Preamble": 0.0, "Data": 0.0, "Features": 0.0, "Classifier": 0.0}
@@ -177,8 +175,7 @@ def train(
 def train_regressor(
     features, labels, K: int, penalty: Penalty, num_c: int, seed: int, multi_class: Literal["auto", "multi_class", "ovr"], verbose: int = 0
 ):
-
-    """Trains a Kfold cross-validated logistic regressor and returns fitted classifier
+    """Trains a Kfold cross-validated logistic regressor and returns fitted classifier.
 
     Args:
         features: a sample x feature floating point numpy array of labeled data to be classified
@@ -193,10 +190,9 @@ def train_regressor(
     Returns:
         LogisticRegressionCV: regressor object to features, labels
 
-    See also:
+    See Also:
         train_svm, sklearn.linear_model.LogisticRegressionCV
     """
-
     Cs = np.logspace(-5, 5, num_c)
     kf = KFold(n_splits=int(len(labels) / float(K)))
 
@@ -223,7 +219,7 @@ def train_regressor(
 
 
 def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int, verbose: int = 0):
-    """Trains a Kfold cross-validated SVM and returns fitted classifier
+    """Trains a Kfold cross-validated SVM and returns fitted classifier.
 
     Args:
         features: a sample x feature floating point numpy array of labeled data to be classified
@@ -237,10 +233,9 @@ def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int,
     Returns:
         GridSearchCV: abstract cross-validation object with SVM sub- object to features, labels
 
-    See also:
+    See Also:
         train_regressor, sklearn.svm.SVC
     """
-
     min_exemplars = min([len([lb for lb in labels if lb == l]) for l in np.unique(labels)])
     Cs = np.logspace(-5, 5, num_c)
     kernels = ["rbf", "linear"]

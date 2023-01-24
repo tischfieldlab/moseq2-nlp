@@ -14,7 +14,7 @@ import pdb
 
 
 def get_scan_values(scale: Literal["log", "linear", "list"], range: List, type="float") -> List:
-    """Generate concrete scan values given a scan specification
+    """Generate concrete scan values given a scan specification.
 
     Parameters:
         scale (Literal['log', 'linear', 'list']): type of scale to scan.
@@ -43,7 +43,7 @@ class CommandWrapper(Protocol):
 def wrap_command_with_slurm(
     cmd: str, preamble: str, partition: str, ncpus: int, memory: str, wall_time: str, extra_params: str, output: Optional[str] = None
 ) -> str:
-    """Wraps a command to be run as a SLURM sbatch job
+    """Wraps a command to be run as a SLURM sbatch job.
 
     Parameters:
         cmd (str): Command to be wrapped
@@ -91,7 +91,7 @@ def wrap_command_with_slurm(
 
 
 def wrap_command_with_local(cmd: str, output: Optional[str] = None) -> str:
-    """Wraps a command to be run locally. Admittedly, this does not do too much
+    """Wraps a command to be run locally. Admittedly, this does not do too much.
 
     Parameters:
         cmd (str): Command to be wrapped
@@ -107,8 +107,7 @@ def wrap_command_with_local(cmd: str, output: Optional[str] = None) -> str:
 
 
 def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
-    """Given a path to YAML scan configuration file, read the contents
-        and generate a dictionary for each implied job
+    """Given a path to YAML scan configuration file, read the contents and generate a dictionary for each implied job.
 
     Parameters:
         scan_file (str): path to a yaml scan configuration file
@@ -158,7 +157,7 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
 
 
 def write_jobs(worker_dicts: List[dict], cluster_format: CommandWrapper, dest_dir: str) -> None:
-    """Write job configurations to YAML files, and write job invocations to stdout
+    """Write job configurations to YAML files, and write job invocations to stdout.
 
     Parameters:
         worker_dicts (List[dict]): Job configurations to write
@@ -179,7 +178,7 @@ def write_jobs(worker_dicts: List[dict], cluster_format: CommandWrapper, dest_di
 
 
 def get_gridsearch_default_scans() -> List:
-    """Generate default scan configuration"""
+    """Generate default scan configuration."""
     return [
         {"parameters": {"representation": "usages"}},
         {
@@ -199,7 +198,7 @@ def get_gridsearch_default_scans() -> List:
 
 
 def find_gridsearch_results(path: str) -> pd.DataFrame:
-    """Find and aggregate grid search results
+    """Find and aggregate grid search results.
 
     Parameters:
         path (str): path to search for experiments
@@ -219,12 +218,12 @@ def find_gridsearch_results(path: str) -> pd.DataFrame:
 
 
 def get_best_model(path: str, key="best_accuracy"):
-    """Finds and returns the best model according to a particular measure
+    """Finds and returns the best model according to a particular measure.
 
     Parameters:
         path (str): path to search for experiments
-        key (sr): measure by which to rank experiments"""
-
+        key (sr): measure by which to rank experiments
+    """
     df = find_gridsearch_results(path).sort_values(key, ascending=False)
     return df.iloc[0]
 

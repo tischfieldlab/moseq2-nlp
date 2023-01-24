@@ -11,7 +11,7 @@ from click.shell_completion import CompletionItem
 # from https://stackoverflow.com/questions/46358797/
 # python-click-supply-arguments-and-options-from-a-configuration-file
 def command_with_config(config_file_param_name: str) -> Type[click.Command]:
-    """Create and return a class inheriting `click.Command` which accepts a configuration file
+    """Create and return a class inheriting `click.Command` which accepts a configuration file.
         containing arguments/options accepted by the command.
 
         The returned class should be passed to the `@click.Commnad` parameter `cls`:
@@ -20,13 +20,12 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
         @cli.command(name='command-name', cls=command_with_config('config_file'))
         ```
 
-    Parameters:
+    Args:
         config_file_param_name (str): name of the parameter that accepts a configuration file
 
     Returns:
         class (Type[click.Command]): Class to use when constructing a new click.Command
     """
-
     class custom_command_class(click.Command):
         def invoke(self, ctx):
             # grab the config file
@@ -64,7 +63,7 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
 
 
 def get_command_defaults(command: click.Command):
-    """Get the defualt values for the options of `command`"""
+    """Get the defualt values for the options of `command`."""
     return {tmp.name: tmp.default for tmp in command.params if not tmp.required}
 
 
@@ -101,13 +100,11 @@ class IntChoice(click.ParamType):
     def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> List[CompletionItem]:
         """Complete choices that start with the incomplete value.
 
-        :param ctx: Invocation context for this command.
-        :param param: The parameter that is requesting completion.
-        :param incomplete: Value being completed. May be empty.
-
-        .. versionadded:: 8.0
+        Args:
+            ctx: Invocation context for this command.
+            param: The parameter that is requesting completion.
+            incomplete: Value being completed. May be empty.
         """
-
         str_choices = map(str, self.choices)
 
         incomplete = incomplete.lower()
@@ -117,9 +114,9 @@ class IntChoice(click.ParamType):
 
 
 def read_yaml(yaml_file: str) -> dict:
-    """Read a yaml file into dict object
+    """Read a yaml file into dict object.
 
-    Parameters:
+    Args:
         yaml_file (str): path to yaml file
 
     Returns:
@@ -131,9 +128,9 @@ def read_yaml(yaml_file: str) -> dict:
 
 
 def write_yaml(yaml_file: str, data: dict) -> None:
-    """Write a dict object into a yaml file
+    """Write a dict object into a yaml file.
 
-    Parameters:
+    Args:
         yaml_file (str): path to yaml file
         data (dict): dict of data to write to `yaml_file`
     """
@@ -146,7 +143,7 @@ def write_yaml(yaml_file: str, data: dict) -> None:
 def ensure_dir(path: str) -> str:
     """Creates the directories specified by path if they do not already exist.
 
-    Parameters:
+    Args:
         path (str): path to directory that should be created
 
     Returns:
@@ -166,7 +163,7 @@ def ensure_dir(path: str) -> str:
 
 
 def get_unique_list_elements(lst):
-    """Returns unique elements from list
+    """Returns unique elements from list.
 
     Args:
         lst: the list

@@ -27,8 +27,8 @@ def dim_red(X, method, **kwargs):
         perplexity: float controlling the perplexity for the tsne method
 
     Returns:
-        z: sample x reduced_feature numpy representing the reduced data"""
-
+        z: sample x reduced_feature numpy representing the reduced data
+    """
     if method == "pca":
         pca = PCA(n_components=2)
         z = pca.fit_transform(X)
@@ -55,9 +55,9 @@ def plot_latent(X, labels, method, save_path, **kwargs):
     Kwargs:
         perplexity: float controlling the perplexity for the tsne method
 
-    See also:
-        dim_red"""
-
+    See Also:
+        dim_red
+    """
     unique_labels = get_unique_list_elements(labels)
     colors = all_colors[: len(unique_labels)]
 
@@ -81,7 +81,7 @@ def plot_latent(X, labels, method, save_path, **kwargs):
 
 
 def update_scatter(i, sentence, scat, ax, num_vocab):
-    """Helper function for updating the color of a scatter plot
+    """Helper function for updating the color of a scatter plot.
 
     Args:
         i: integer index to get colors
@@ -94,10 +94,9 @@ def update_scatter(i, sentence, scat, ax, num_vocab):
         scat: updated scatter object
         ax: updated axis object
 
-    See also:
+    See Also:
         animate_latent_path
     """
-
     colors = ["gray"] * num_vocab
     colors[sentence[i]] = "red"
     scat.set_facecolors(colors)
@@ -117,7 +116,7 @@ def animate_latent_path(X, sentence, method, save_path, **kwargs):
     Kwargs:
         perplexity: float controlling the perplexity for the tsne method
 
-    See also:
+    See Also:
         update_scatter
     """
     num_frames = len(sentence)

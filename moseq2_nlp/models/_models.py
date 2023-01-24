@@ -20,7 +20,7 @@ class DocumentEmbedding(object):
         seed: int = 0,
         multithreading: bool = False,
     ):
-        """Create a document emedding with some parameters
+        """Create a document emedding with some parameters.
 
         Parameters:
             dm (int): Defines the training algorithm. If dm=1, 'distributed memory' (PV-DM) is used. Otherwise, distributed bag of words (PV-DBOW) is employed.
