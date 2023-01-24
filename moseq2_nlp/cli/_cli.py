@@ -168,13 +168,13 @@ def moseq_to_raw(model_file, index_file, data_dir):
         with open(fn, 'wb') as file:
             pickle.dump(dat,file)
 
-@cli.command(name="plot_latent", help="plot latent space of classified data (e.g. animals)")
+@cli.command(name="plot-latent", help="plot latent space of classified data (e.g. animals)")
 @click.argument("features_path", type=click.Path(exists=True))
 @click.argument("labels_path", type=click.Path(exists=True))
 @click.option("--method", type=click.Choice(['pca', 'tsne', 'umap']), default='pca')
 @click.option("--save_path", type=click.Path(exists=True), default='./z.png')
 @click.option("--perplexity", type=float, default=3.0)
-def plot_latent(features_path, labels_path, method, save_path, perplexity):
+def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
 
     with open(features_path,'rb') as fn:
         X = pickle.load(fn)
@@ -184,7 +184,7 @@ def plot_latent(features_path, labels_path, method, save_path, perplexity):
 
     plot_latent(X, labels, method, save_path, perplexity=perplexity)
 
-@cli.command(name="animate_latent", help="animate path of unclassified data (e.g. syllables)")
+@cli.command(name="animate-latent", help="animate path of unclassified data (e.g. syllables)")
 @click.argument("features_path", type=click.Path(exists=True))
 @click.argument("model-file", type=click.Path(exists=True))
 @click.argument("index-file", type=click.Path(exists=True))
@@ -192,7 +192,7 @@ def plot_latent(features_path, labels_path, method, save_path, perplexity):
 @click.option("--method", type=click.Choice(['pca', 'tsne', 'umap']), default='pca')
 @click.option("--save_path", type=click.Path(exists=True), default='./z_anim.gif')
 @click.option("--perplexity", type=float, default=3.0)
-def plot_latent(features_path, model_file, index_file, method, save_path, perplexity):
+def animate_latent_cmd(features_path, model_file, index_file, method, save_path, perplexity):
 
     with open(features_path,'rb') as fn:
         X = pickle.load(fn)
