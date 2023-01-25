@@ -11,7 +11,9 @@ from click.shell_completion import CompletionItem
 # from https://stackoverflow.com/questions/46358797/
 # python-click-supply-arguments-and-options-from-a-configuration-file
 def command_with_config(config_file_param_name: str) -> Type[click.Command]:
-    """Create and return a class inheriting `click.Command` which accepts a configuration file.
+    """Get a command class which supports configuration files.
+
+        Create and return a class inheriting `click.Command` which accepts a configuration file
         containing arguments/options accepted by the command.
 
         The returned class should be passed to the `@click.Commnad` parameter `cls`:
@@ -26,6 +28,7 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
     Returns:
         class (Type[click.Command]): Class to use when constructing a new click.Command
     """
+
     class custom_command_class(click.Command):
         def invoke(self, ctx):
             # grab the config file
