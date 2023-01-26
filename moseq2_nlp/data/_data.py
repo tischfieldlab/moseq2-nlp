@@ -52,13 +52,14 @@ def load_groups(index_file: str, custom_groupings: List[str]) -> Dict[str, str]:
 
     return group_mapping
 
-def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_syllables: List[int]=[-5]):
+def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_syllables: List[int]=[-5], num_transitions=None):
     """Compute usage (bag of words) representations.
 
     Args:
         sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
         max_syllable: an int indicating the maximum value of syllables to be counted
         bad_syllables: a list, defaulting to [-5], indicating syllables to be excluded from the count. 
+        num_transitions: None; not used for this function
 
     Returns:
         U: The usage representation of all animals in the form of an animal x max_syllable np.float32 array; i.e. a normalized histogram of syllable counts.
@@ -73,7 +74,8 @@ def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_
         u, _ = get_syllable_statistics([sentence], max_syllable=max_syllable, count='usage')
         u_vals = list(u.values())[:max_syllable]
         total_u = np.sum(u_vals)
-        U.append(np.array(u_vals) / total_u)
+        normalized_usages = np.array(u_vals) / total_u
+        U.append(normalized_usages)
     U = np.array(U)
     return U
 

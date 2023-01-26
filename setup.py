@@ -21,7 +21,7 @@ setup(
         'ruamel.yaml',
         'moseq2-viz', # @ git+https://github.com/tischfieldlab/moseq2-viz.git@master'
         'wordcloud',
-        'eli5',
+        'lime',
         'umap-learn'
     ],
     extras_require={
