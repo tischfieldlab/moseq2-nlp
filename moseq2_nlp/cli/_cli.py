@@ -31,6 +31,7 @@ orig_init = click.core.Option.__init__
 
 
 def new_init(self, *args, **kwargs):
+    """Sets click init."""
     orig_init(self, *args, **kwargs)
     self.show_default = True
 
@@ -41,6 +42,7 @@ click.core.Option.__init__ = new_init  # type: ignore
 @click.group()
 @click.version_option()
 def cli():
+    """Entry point."""
     pass
 
 
@@ -97,6 +99,36 @@ def train(
     verbose,
     config_file,
 ):
+    """Train a classifier from scratch.
+
+    Arguments:
+        name: str, name of the experiment
+        save_dir: str, where model will be saved
+        data_path: str, where sentences and labels are stored
+        representation: literal ('usages', 'transitions', 'embeddings') indicating feature type
+        classifier: literal ('logistic_regressor', 'svm') indicating classifier type
+        kernel: literal ('linear', 'poly', 'rbf', 'sigmoid') indicating kernel for svm
+        emissions: bool, whether or not to use emissions or frames
+        num_syllables: int, max syllables to include in analysis
+        num_transitions: int, max number of transitions to include in transition rep
+        min_count: int, minimum # of times syllables has to appear overall to be included in analysis
+        negative: int, exponent used for negative sampling in doc2vec
+        dm: literal (0,1,2) indicating which between cbow, dm or their average to use for doc2vec
+        embedding_dim: int, dimension of d2v embedding space
+        embedding_window: int, window size for d2v context
+        embedding_epochs: int, number of training steps for d2v
+        bad_syllables: list of ints, syllables to exclude
+        test_size: float, prop for test set
+        k: int, k-fold cv
+        penalty: literal ('l2', 'l1', 'elasticnet') for regressor penalty temr
+        num_c: int, number of regularizer weights chosen logarithmically between 1e-5 and 1e5 for classifier
+        multi_class: literal ('ovr', 'auto', 'multinomial'), multiclass scheme for logistic regressor
+        seed: int, seed for features
+        split_seed: int, seed for train-test split
+        verbose: int, 0 for no messages
+        config_file: str, path for config variables.
+
+    """
     trainer.train(
         name,
         save_dir,
@@ -128,6 +160,12 @@ def train(
 @cli.command(name="generate-train-config", help="Generates a configuration file that holds editable options for training parameters.")
 @click.option("--output-file", "-o", type=click.Path(), default="train-config.yaml")
 def generate_train_config(output_file):
+    """Generate a train config file.
+
+    Args:
+        output_file: str, where to save the config yaml.
+        
+    """
     output_file = os.path.abspath(output_file)
     write_yaml(output_file, get_command_defaults(train))
     print(f'Successfully generated train config file at "{output_file}".')
@@ -139,8 +177,17 @@ def generate_train_config(output_file):
 @click.option("--threshes", type=float, multiple=True, default=[0.001, 0.001])
 @click.option("--n", type=int, default=2)
 @click.option("--min-count", type=int, default=2)
-def make_phrases(data_path, save_path, wordcloud_path, threshes, n, min_count, visualize, max_plot):
+def make_phrases(data_path, save_path, threshes, n, min_count):
+    """Detect phrases and save them in a dict.
 
+    Args:
+        data_path: str, where sentences and labels are saved
+        save_path: str, where to save the phrases dict
+        threshes: list of floats, indicating threshholds for phrase detection
+        n: int, number of times to aggregate syllables into higher-order units
+        min_count: int, minimum # of times syllables has to appear overall to be included in analysis.
+
+    """
     with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
         sentences = pickle.load(fn)
 
@@ -173,7 +220,20 @@ def make_phrases(data_path, save_path, wordcloud_path, threshes, n, min_count, v
 def grid_search(
     scan_file, save_dir, cluster_type, slurm_partition, slurm_ncpus, slurm_memory, slurm_wall_time, slurm_preamble, slurm_extra
 ):
+    """Write jobs for gridsearch.
 
+    Args:
+        scan_file: str, config yaml with gridsearch parameters
+        save_dir: str, where to save the job strings
+        cluster_type: str, either `local` or `slurm`
+        slurm_partition: str, Partition on which to run jobs. Only for SLURM
+        slurm_ncpus: int, Number of CPUs per job. Only for SLURM
+        slurm_memory: str, Amount of memory per job. Only for SLURM
+        slurm_wall_time: str, Max wall time per job. Only for SLURM
+        slurm_preamble: str, Extra commands to run prior to executing job. Useful for activating an environment, if needed
+        slurm_extra: str, Extra parameters to pass to slurm.
+
+    """
     worker_dicts = generate_grid_search_worker_params(scan_file)
 
     if cluster_type == "local":
@@ -201,7 +261,12 @@ def grid_search(
 )
 @click.option("--output-file", "-o", type=click.Path(), default="gridsearch-config.yaml")
 def generate_gridsearch_config(output_file):
+    """Generate gridsearch config file.
 
+    Args:
+        output_file:str, where to save the config.
+
+    """
     params = {"scans": get_gridsearch_default_scans(), "parameters": get_command_defaults(train)}
 
     output_file = os.path.abspath(output_file)
@@ -213,7 +278,13 @@ def generate_gridsearch_config(output_file):
 @click.argument("results-directory", type=click.Path(exists=True))
 @click.option("--best-key", type=str, default="best_accuracy")
 def aggregate_gridsearch_results(results_directory, best_key):
+    """Aggregate gridsearch results.
 
+    Args:
+        results_directory: str, path where results are saved.
+        best_key: str, how to sort results.
+
+    """
     results = find_gridsearch_results(results_directory).sort_values(best_key, ascending=False)
     results.to_csv(os.path.join(results_directory, "gridsearch-aggregate-results.tsv"), sep="\t", index=False)
 
@@ -227,7 +298,15 @@ def aggregate_gridsearch_results(results_directory, best_key):
 @click.option("--data-dir", type=str, default=".")
 @click.option("--custom-groupings", type=str, multiple=True, default=[])
 def moseq_to_raw(model_file, index_file, data_dir):
+    """Convert model file and index file to sentences and labels.
 
+    Args:
+        model_file: p file from moseq
+        index_file: yaml file from moseq
+        data_dir: str, where to save sentences, labels
+        custom_groupings: list of str, each str is a comma separated sequence of labels to be grouped into one class
+
+    """
     ensure_dir(data_dir)
 
     sentences, labels = get_raw(model_file, index_file, custom_groupings)
@@ -240,13 +319,22 @@ def moseq_to_raw(model_file, index_file, data_dir):
 
 
 @cli.command(name="plot-latent", help="plot latent space of classified data (e.g. animals)")
-@click.argument("features_path", type=click.Path(exists=True))
-@click.argument("labels_path", type=click.Path(exists=True))
+@click.argument("features-path", type=click.Path(exists=True))
+@click.argument("labels-path", type=click.Path(exists=True))
 @click.option("--method", type=click.Choice(["pca", "tsne", "umap"]), default="pca")
-@click.option("--save_path", type=click.Path(exists=True), default="./z.png")
+@click.option("--save-path", type=click.Path(exists=True), default="./z.png")
 @click.option("--perplexity", type=float, default=3.0)
 def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
+    """Plot pca/tsne/umap of features.
 
+    Args:
+        features_path: str, where features are saved
+        labels_path: str, where labels are saved
+        method: str, which method (pca, tsne, map) used for dim reduction
+        save_path: str, where to save plot
+        perplexity: float, perplexity argument for tsne method
+
+    """
     with open(features_path, "rb") as fn:
         X = pickle.load(fn)
 
@@ -257,7 +345,7 @@ def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
 
 
 @cli.command(name="animate-latent", help="animate path of unclassified data (e.g. syllables)")
-@click.argument("features_path", type=click.Path(exists=True))
+@click.argument("features-path", type=click.Path(exists=True))
 @click.argument("model-file", type=click.Path(exists=True))
 @click.argument("index-file", type=click.Path(exists=True))
 @click.argument("animal-index", type=int)
@@ -265,7 +353,18 @@ def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
 @click.option("--save_path", type=click.Path(exists=True), default="./z_anim.gif")
 @click.option("--perplexity", type=float, default=3.0)
 def animate_latent_cmd(features_path, model_file, index_file, method, save_path, perplexity):
+    """Animate sequence of syllables in latent space (pca, tsne, umap).
+        
+    Args:
+        features_path: str, where features are saved
+        model_file: p file from moseq
+        index_file: yaml file from moseq
+        animal_index: int, index of animal whose path to visualize
+        method: str, which method (pca, tsne, map) used for dim reduction
+        save_path: str, where to save animation
+        perplexity: float, perplexity argument for tsne method.
 
+    """
     with open(features_path, "rb") as fn:
         X = pickle.load(fn)
 

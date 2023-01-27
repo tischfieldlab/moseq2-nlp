@@ -30,7 +30,17 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
     """
 
     class custom_command_class(click.Command):
+        """Command which accepts config file.
+
+        Methods:
+            invoke: invoke the command
+        """
         def invoke(self, ctx):
+            """Invoke the command accepting config as part of argument.
+
+            Args:
+                ctx: click.Command arguments including config file.
+            """
             # grab the config file
             config_file = ctx.params[config_file_param_name]
             param_defaults = {p.human_readable_name: p.default for p in self.params if isinstance(p, click.core.Option)}
@@ -66,22 +76,43 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
 
 
 def get_command_defaults(command: click.Command):
-    """Get the defualt values for the options of `command`."""
+    """Get the defualt values for the options of `command`.
+
+    Args:
+        command: click command
+    Returns:
+        Default arguments for command.
+    """
     return {tmp.name: tmp.default for tmp in command.params if not tmp.required}
 
 
 class IntChoice(click.ParamType):
+    """Click argument option comprising a choice between several integers."""
     name = "intchoice"
 
     def __init__(self, choices: Sequence[int]) -> None:
+        """Initialize IntChoice object.
+
+        Args:
+            choices: sequence of integers from which the user may chose.
+        """
         self.choices = choices
 
     def to_info_dict(self) -> Dict[str, Any]:
+        """Adds choice arguments to dictionary attribute."""
         info_dict = super().to_info_dict()
         info_dict["choices"] = self.choices
         return info_dict
 
     def get_metavar(self, param: click.Parameter) -> str:
+        """Converts choice argument to string whose format indicates status as optional or required.
+
+        Args:
+            param: click parameter indicating argument status.
+
+        Returns:
+            Either a curly-bracketed string or a square-bracked string, depending on whether the argument is required or optional, respectively.
+        """
         choices_str = "|".join([str(c) for c in self.choices])
 
         # Use curly braces to indicate a required argument.
@@ -92,12 +123,35 @@ class IntChoice(click.ParamType):
         return f"[{choices_str}]"
 
     def get_missing_message(self, param: click.Parameter) -> str:
+        """Returns message if supplied argument is not part of fixed choices.
+
+        Args:
+            param: not used.
+
+        Returns:
+            Message indicating from which integers a choice must be made.
+        """
         return gettext("Choose from:\n\t{choices}").format(choices=",\n\t".join([str(c) for c in self.choices]))
 
     def convert(self, value: Any, param: Optional[click.Parameter], ctx: Optional[click.Context]) -> Any:
+        """Converts input value to integer.
+
+        Args:
+            value: supplied value of any type.
+            param: not used.
+            ctx: not used.
+
+        Returns:
+            Integer version of value.
+        """
         return int(str(value))
 
     def __repr__(self) -> str:
+        """Returns string describing argument format.
+
+        Returns:
+            String describing IntChoice format, including integers from which the choice must be made.
+        """
         return f"Choice({list([str(c) for c in self.choices])})"
 
     def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> List[CompletionItem]:
@@ -107,6 +161,9 @@ class IntChoice(click.ParamType):
             ctx: Invocation context for this command.
             param: The parameter that is requesting completion.
             incomplete: Value being completed. May be empty.
+
+        Returns:
+            List of completed items.
         """
         str_choices = map(str, self.choices)
 

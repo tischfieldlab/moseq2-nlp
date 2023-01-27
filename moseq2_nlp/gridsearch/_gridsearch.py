@@ -16,10 +16,10 @@ import pdb
 def get_scan_values(scale: Literal["log", "linear", "list"], range: List, type="float") -> List:
     """Generate concrete scan values given a scan specification.
 
-    Parameters:
-        scale (Literal['log', 'linear', 'list']): type of scale to scan.
-        range (List): arguments for the scale
-        type (dtype-like): dtype for the scale
+    Args:
+        scale: (Literal['log', 'linear', 'list']) type of scale to scan.
+        range: (List) arguments for the scale
+        type: (dtype-like) dtype for the scale
 
     Returns:
         (List): List of values to scan over
@@ -36,7 +36,14 @@ def get_scan_values(scale: Literal["log", "linear", "list"], range: List, type="
 
 
 class CommandWrapper(Protocol):
+    """Wraps command."""
     def __call__(self, cmd: str, output: Optional[str] = None, **kwds: Any) -> str:
+        """Calls command.
+
+        Args:
+            cmd: string carrying out command
+            output: output option
+        """
         ...
 
 
@@ -45,7 +52,7 @@ def wrap_command_with_slurm(
 ) -> str:
     """Wraps a command to be run as a SLURM sbatch job.
 
-    Parameters:
+    Args:
         cmd (str): Command to be wrapped
         preamble (str): Commands to be run prior to `cmd` as part of this job
         partition (str): Partition on which to run this job
@@ -93,7 +100,7 @@ def wrap_command_with_slurm(
 def wrap_command_with_local(cmd: str, output: Optional[str] = None) -> str:
     """Wraps a command to be run locally. Admittedly, this does not do too much.
 
-    Parameters:
+    Args:
         cmd (str): Command to be wrapped
         output (str): Path of file to write output to
 
@@ -109,7 +116,7 @@ def wrap_command_with_local(cmd: str, output: Optional[str] = None) -> str:
 def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
     """Given a path to YAML scan configuration file, read the contents and generate a dictionary for each implied job.
 
-    Parameters:
+    Args:
         scan_file (str): path to a yaml scan configuration file
 
     Returns:
@@ -159,7 +166,7 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
 def write_jobs(worker_dicts: List[dict], cluster_format: CommandWrapper, dest_dir: str) -> None:
     """Write job configurations to YAML files, and write job invocations to stdout.
 
-    Parameters:
+    Args:
         worker_dicts (List[dict]): Job configurations to write
         cluster_format (Callable[[str], str]): A callable to format the job invoation for a given environment
         dest_dir (str): directory to write job configurations to
@@ -200,7 +207,7 @@ def get_gridsearch_default_scans() -> List:
 def find_gridsearch_results(path: str) -> pd.DataFrame:
     """Find and aggregate grid search results.
 
-    Parameters:
+    Args:
         path (str): path to search for experiments
     """
     experiments = glob.glob(os.path.join(path, "*", "experiment_info.yaml"))
@@ -220,7 +227,7 @@ def find_gridsearch_results(path: str) -> pd.DataFrame:
 def get_best_model(path: str, key="best_accuracy"):
     """Finds and returns the best model according to a particular measure.
 
-    Parameters:
+    Args:
         path (str): path to search for experiments
         key (sr): measure by which to rank experiments
     """
@@ -229,6 +236,14 @@ def get_best_model(path: str, key="best_accuracy"):
 
 
 def observe_gs_variation(path: str, representation_name: str, dep_var_name: str, ind_var_name: str):
+    """Plots how two gridsearch variables covary.
+
+    Args:
+        path: str, where gridsearch results are saved in the form of a pandas dataframe
+        representation_name: str indicating which features among usages, transitions and embeddings were used
+        dep_var_name: str, first variable name, plotted on y axis
+        ind_var_name: str, second variable name, plotted on x axis
+    """
     df = find_gridsearch_results(path)
     current_df = df.loc[df["representation"] == representation_name]
     dep_var = current_df[dep_var_name].values

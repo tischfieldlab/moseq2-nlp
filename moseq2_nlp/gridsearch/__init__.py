@@ -1,3 +1,4 @@
+"""Init gridsearch."""
 from ._gridsearch import (
     find_gridsearch_results,
     generate_grid_search_worker_params,

@@ -115,7 +115,7 @@ def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_coun
 
 
 def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
-    """make_phrases: makes a dictionary containing disciminating phrases for a given class.
+    """Makes a dictionary containing disciminating phrases for a given class.
 
     Positional args:
         foreground_seqs (list): a list of sequences from which significant phrases are extracted
@@ -170,7 +170,7 @@ def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
 
 
 def make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count):
-    """make_phrases_dataset: makes a dictionary containing disciminating phrases for each class in a dataset.
+    """Makes a dictionary containing disciminating phrases for each class in a dataset.
 
     Positional args:
         sentences (List of strs): list of sentences representing moseq emissions
@@ -200,6 +200,14 @@ def make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count):
 
 
 def ablate_phrases(sentences, labels, phrase_path, max_syllable=70):
+    """Loads phrases and then replaces them in sentences with random syllables.
+
+    Positional args:
+        sentences (List of strs): list of sentences representing moseq emissions
+        labels (List of strs): list of class labels for each animal
+        phare_path (str): path for loading pickled dictionary of phrases
+        max_syllable (int): highest integer syllable to randomly replace an abblated syllable in sentences
+    """
     with open(phrase_path, "rb") as fn:
         phrases = pickle.load(fn)
 

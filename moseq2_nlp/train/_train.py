@@ -60,6 +60,7 @@ def train(
     Args:
         name: string which names the experiment
         save_dir: directory in which the features and classifier results will be saved
+        data_path: str, where sentences and label pickles are stored
         representation: string indicating which representation, among `usages`, `transitions` and `embeddings`, will be used
         classifier: string, either `logistic_regression` or `svm`, which determines the classifier type
         emissions: boolean determining whether behavior will be represented as frames (False) or emisisons (True)

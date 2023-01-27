@@ -9,6 +9,17 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 
 
 class DocumentEmbedding(object):
+    """Create a document emedding with some parameters.
+
+    Methods: 
+        fit: Fit a model to some data
+        predict: Predict document embedding.
+        predict_word: Predict word embedding.
+        fit_predict: Fit model to documents and return their embeddings
+        save: Save model
+        load: Load model
+
+    """
     def __init__(
         self,
         dm: Literal[0, 1, 2] = 0,
@@ -16,18 +27,19 @@ class DocumentEmbedding(object):
         embedding_window: int = 5,
         embedding_epochs: int = 50,
         min_count: int = 2,
-        negative: int = 0,
-        seed: int = 0,
-        multithreading: bool = False,
+        negative: int = 5,
+        seed: int = 0
     ):
         """Create a document emedding with some parameters.
 
-        Parameters:
-            dm (int): Defines the training algorithm. If dm=1, 'distributed memory' (PV-DM) is used. Otherwise, distributed bag of words (PV-DBOW) is employed.
-            embedding_dim (int): Dimensionality of the feature vectors.
-            embedding_window (int): The maximum distance between the current and predicted word within a sentence.
-            embedding_epochs (int): Number of iterations (epochs) over the corpus.
-            min_count (int): Ignore all words with total frequency lower than this.
+        Args:
+            dm: int,  Defines the training algorithm. If dm=1, 'distributed memory' (PV-DM) is used. Otherwise, distributed bag of words (PV-DBOW) is employed.
+            embedding_dim: int, Dimensionality of the feature vectors.
+            embedding_window: int, The maximum distance between the current and predicted word within a sentence.
+            embedding_epochs: int, Number of iterations (epochs) over the corpus.
+            negative: int, exponent for negative sampling in doc2vec training
+            min_count: int,  Ignore all words with total frequency lower than this.
+            seed: random seed for initalization
         """
         self.dm = dm
         self.embedding_dim = embedding_dim
@@ -39,8 +51,8 @@ class DocumentEmbedding(object):
     def fit(self, sentences: List[List[str]]) -> None:
         """Fit a model to some data.
 
-        Parameters:
-            sentences (List[List[str]]): data to fit the model to
+        Args:
+            sentences: (List[List[str]]), data to fit the model to.
         """
         documents = [TaggedDocument(sent, [i]) for i, sent in enumerate(sentences)]
         if self.dm < 2 and self.dm >= 0:
@@ -80,10 +92,10 @@ class DocumentEmbedding(object):
             raise ValueError("Distributed memory value not valid. Accepted values are dm=0,1,2.")
 
     def predict(self, sentences: List[List[str]]) -> np.ndarray:
-        """Predict.
+        """Predict document embedding.
 
-        Parameters:
-            sentences (List[List[str]]): data to fit the model to
+        Args:
+            sentences: (List[List[str]]) data to fit the model to
 
         Returns:
             (np.ndarray):
@@ -100,8 +112,8 @@ class DocumentEmbedding(object):
     def predict_word(self, word: str) -> np.ndarray:
         """Predict a single word.
 
-        Parameters:
-            word (str):
+        Args:
+            word: (str) word to be predicted
 
         Returns:
             (np.ndarray):
@@ -113,13 +125,13 @@ class DocumentEmbedding(object):
     def fit_predict(self, sentences) -> np.ndarray:
         """Fit the model and then predict results.
 
-        Equivelent to:
+        Equivalent to:
         ```
         model.fit(sentences)
         model.predict(sentences)
         ```
 
-        Parameters:
+        Args:
             sentences: data to fit and predict
         """
         self.fit(sentences)
@@ -141,8 +153,8 @@ class DocumentEmbedding(object):
         Or the files (when `dm == 2`):
         `/path/to/dest/my-model.0.model` and `/path/to/dest/my-model.1.model`
 
-        Parameters:
-            name (str): path (incliding basename) to where the model should be saved
+        Args:
+            name: str path (incliding basename) to where the model should be saved
         """
         if self.dm < 2:
             self.model.save(f"{name}.model")
@@ -161,8 +173,8 @@ class DocumentEmbedding(object):
         model.load('/path/to/dest/my-model')
         ```
 
-        Parameters:
-            name (str): path (incliding basename) to where the model should be saved
+        Args:
+            name: str  path (incliding basename) to where the model should be saved
         """
         if self.dm < 2:
             self.model = Doc2Vec.load(f"{name}.model")
