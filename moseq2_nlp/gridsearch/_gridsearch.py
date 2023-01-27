@@ -37,6 +37,7 @@ def get_scan_values(scale: Literal["log", "linear", "list"], range: List, type="
 
 class CommandWrapper(Protocol):
     """Wraps command."""
+
     def __call__(self, cmd: str, output: Optional[str] = None, **kwds: Any) -> str:
         """Calls command.
 

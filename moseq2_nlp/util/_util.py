@@ -35,6 +35,7 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
         Methods:
             invoke: invoke the command
         """
+
         def invoke(self, ctx):
             """Invoke the command accepting config as part of argument.
 
@@ -88,6 +89,7 @@ def get_command_defaults(command: click.Command):
 
 class IntChoice(click.ParamType):
     """Click argument option comprising a choice between several integers."""
+
     name = "intchoice"
 
     def __init__(self, choices: Sequence[int]) -> None:

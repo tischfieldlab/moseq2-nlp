@@ -164,7 +164,7 @@ def generate_train_config(output_file):
 
     Args:
         output_file: str, where to save the config yaml.
-        
+
     """
     output_file = os.path.abspath(output_file)
     write_yaml(output_file, get_command_defaults(train))
@@ -354,7 +354,7 @@ def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
 @click.option("--perplexity", type=float, default=3.0)
 def animate_latent_cmd(features_path, model_file, index_file, method, save_path, perplexity):
     """Animate sequence of syllables in latent space (pca, tsne, umap).
-        
+
     Args:
         features_path: str, where features are saved
         model_file: p file from moseq
