@@ -11,7 +11,7 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 class DocumentEmbedding(object):
     """Create a document emedding with some parameters.
 
-    Methods: 
+    Methods:
         fit: Fit a model to some data
         predict: Predict document embedding.
         predict_word: Predict word embedding.
@@ -20,6 +20,7 @@ class DocumentEmbedding(object):
         load: Load model
 
     """
+
     def __init__(
         self,
         dm: Literal[0, 1, 2] = 0,
@@ -28,7 +29,7 @@ class DocumentEmbedding(object):
         embedding_epochs: int = 50,
         min_count: int = 2,
         negative: int = 5,
-        seed: int = 0
+        seed: int = 0,
     ):
         """Create a document emedding with some parameters.
 

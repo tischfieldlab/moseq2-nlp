@@ -72,14 +72,13 @@ def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_
     """
     U = []
     for sentence in sentences:
-
-        sentence = np.array([int(s) for s in sentence if s not in bad_syllables])
-        u, _ = get_syllable_statistics([sentence], max_syllable=max_syllable, count="usage")
+        sent_array = np.array([int(s) for s in sentence if s not in bad_syllables])
+        u, _ = get_syllable_statistics([sent_array], max_syllable=max_syllable, count="usage")
         u_vals = list(u.values())[:max_syllable]
         total_u = np.sum(u_vals)
         U.append(np.array(u_vals) / total_u)
-    U = np.array(U)
-    return U
+
+    return np.array(U)
 
 
 def get_transition_representation(sentences: List[List[str]], num_transitions: int, max_syllable: int, bad_syllables: List[int] = [-5]):
@@ -99,8 +98,8 @@ def get_transition_representation(sentences: List[List[str]], num_transitions: i
     """
     tm_vals = []
     for sentence in sentences:
-        sentence = np.array([int(s) for s in sentence if s not in bad_syllables])
-        tm = get_transition_matrix([sentence], combine=True, max_syllable=max_syllable)
+        sent_array = np.array([int(s) for s in sentence if s not in bad_syllables])
+        tm = get_transition_matrix([sent_array], combine=True, max_syllable=max_syllable)
         tm_vals.append(tm.ravel())
 
     # Post-processing including truncation of transitions

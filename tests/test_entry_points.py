@@ -3,6 +3,7 @@ import pkgutil
 import subprocess
 from importlib import import_module
 from pathlib import Path
+from typing import List
 
 import click
 import pytest
@@ -15,10 +16,18 @@ def command_tree(obj):
         return {name: command_tree(value) for name, value in obj.commands.items()}
 
 
-commands = list(command_tree(cli).keys())
+def collect_commands(group: click.Group) -> List[str]:
+    return list(command_tree(group).keys())
 
 
-@pytest.mark.parametrize("entry_point", commands, ids=commands)
+def collect_modules(root: str) -> List[str]:
+    pkg_path = str(Path(__file__).resolve().parent.parent.joinpath(root))
+    modules_to_test = pkgutil.iter_modules([pkg_path], prefix=f"{root}.")
+    module_names = [m.name for m in modules_to_test]
+    return module_names
+
+
+@pytest.mark.parametrize("entry_point", collect_commands(cli))
 def test_entry_point(entry_point):
     os.environ["COVERAGE_PROCESS_START"] = "1"
     rtn_code = subprocess.call(["moseq2-nlp", str(entry_point), "--help"])
@@ -26,12 +35,7 @@ def test_entry_point(entry_point):
     os.environ.pop("COVERAGE_PROCESS_START")
 
 
-pkg_path = Path(__file__).resolve().parent.parent.joinpath("moseq2_nlp")
-modules_to_test = pkgutil.iter_modules([pkg_path], prefix="moseq2_nlp.")
-module_names = [m.name for m in modules_to_test]
-
-
-@pytest.mark.parametrize("module_path", module_names)
+@pytest.mark.parametrize("module_path", collect_modules("paws_tools"))
 def test_import(module_path):
     import_module(module_path)
     assert True
