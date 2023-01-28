@@ -108,7 +108,6 @@ def train(
     if representation == "embeddings":
         features = get_embedding_representation(
             sentences,
-            emissions=emissions,
             bad_syllables=bad_syllables,
             dm=dm,
             embedding_dim=embedding_dim,
@@ -117,8 +116,6 @@ def train(
             min_count=min_count,
             negative=negative,
             model_dest=os.path.join(exp_dir, "doc2vec"),
-            ablation="none",
-            phrase_path=None,
             seed=seed,
         )
 

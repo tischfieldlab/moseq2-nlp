@@ -72,6 +72,7 @@ def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_
     """
     U = []
     for sentence in sentences:
+
         sentence = np.array([int(s) for s in sentence if s not in bad_syllables])
         u, _ = get_syllable_statistics([sentence], max_syllable=max_syllable, count="usage")
         u_vals = list(u.values())[:max_syllable]
@@ -110,7 +111,7 @@ def get_transition_representation(sentences: List[List[str]], num_transitions: i
     sorted_tm_vals = tm_vals_array[:, sorted_inds]
     if num_transitions < 0:
         tm_sums = list(sorted_tm_vals.sum(0))
-        first_zero = max_syllable - next((i for i, x in enumerate(tm_sums) if x), None)
+        first_zero = max_syllable - next((i for i, x in enumerate(tm_sums) if x), len(tm_sums))
         T = sorted_tm_vals[:, :first_zero]
     else:
         T = sorted_tm_vals[:, -1 * num_transitions :]
