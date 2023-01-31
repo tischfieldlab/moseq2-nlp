@@ -19,6 +19,7 @@ class Explainer(object):
                                    'max_syllable': max_syllable}
 
     def predict(self, sentences):
+        pdb.set_trace()
         formatted_sentences = [re.sub('\  +', ' ', sent).split(' ') for sent in sentences]
         for s, sentence in enumerate(formatted_sentences):
 
@@ -35,5 +36,3 @@ class Explainer(object):
     
     def explain_class():
         raise NotImplemented
-
-
