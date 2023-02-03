@@ -107,8 +107,23 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-          environment-file: environment.yml
+          # environment-file: environment.yml
           activate-environment: moseq2-nlp
+
+      - name: Checkout moseq2-viz
+        uses: actions/checkout@v2
+        with:
+          path: ./repos/moseq2-viz
+          token: ${{ secrets.SERVICE_ACCOUNT_TOKEN }}
+          repository: tischfieldlab/moseq2-viz
+
+      - name: Install moseq2-viz
+        run: |
+          pip install -e ./repos/moseq2-viz
+
+      - name: Install dependencies
+        run: |
+          pip install --editable .[dev]
 
       - name: Print environment info
         shell: bash -l {0}
