@@ -43,7 +43,7 @@ jobs:
     steps:
 
     - name: Checkout repo
-      uses: actions/checkout@v3.0.2
+      uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -51,7 +51,7 @@ jobs:
         python-version: 3.9
 
     - name: Checkout moseq2-viz
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         path: ./repos/moseq2-viz
         token: ${{ secrets.SERVICE_ACCOUNT_TOKEN }}
@@ -94,7 +94,7 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3.0.2
+        uses: actions/checkout@v3
 
       - name: Cache conda
         uses: actions/cache@v1
@@ -115,7 +115,7 @@ jobs:
           activate-environment: moseq2-nlp
 
       - name: Checkout moseq2-viz
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: ./repos/moseq2-viz
           token: ${{ secrets.SERVICE_ACCOUNT_TOKEN }}
