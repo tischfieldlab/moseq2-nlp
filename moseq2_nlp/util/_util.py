@@ -49,7 +49,6 @@ def command_with_config(config_file_param_name: str) -> Type[click.Command]:
             param_cli = {k: tuple(v) if type(v) is list else v for k, v in ctx.params.items()}
 
             if config_file is not None:
-
                 config_data = read_yaml(config_file)
                 # modified to only use keys that are actually defined in options
                 config_data = {

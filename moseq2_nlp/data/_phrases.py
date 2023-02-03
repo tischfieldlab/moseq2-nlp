@@ -135,7 +135,6 @@ def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
     count = 0
     num_syl = float(len(flat_foreground_seqs))
     for m in range(n):
-
         # All non-unique bigrams in background and foreground sequences
         background_bigrams = [flat_background_seqs[i] + ">" + flat_background_seqs[i + 1] for i in range(len(flat_background_seqs) - 1)]
         foreground_bigrams = [flat_foreground_seqs[i] + ">" + flat_foreground_seqs[i + 1] for i in range(len(flat_foreground_seqs) - 1)]
@@ -187,7 +186,6 @@ def make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count):
 
     # For each group
     for label in unique_labels:
-
         # Compare label to other labels (including itself)
         foreground_sents = [seq for s, seq in enumerate(sentences) if labels[s] == label]
         background_sents = sentences

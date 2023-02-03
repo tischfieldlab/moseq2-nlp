@@ -130,7 +130,6 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
 
     worker_dicts = []
     for scan in scans:
-
         scan_param_products = []
         if "scan" in scan:
             scan_param_gens = {}
