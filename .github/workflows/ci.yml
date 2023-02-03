@@ -88,6 +88,10 @@ jobs:
     name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
     runs-on: ${{ matrix.os }}
 
+    defaults:
+      run:
+        shell: bash -el {0}
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3.0.2
@@ -127,7 +131,6 @@ jobs:
 
       - name: Print environment info
         if: always()
-        shell: bash -l {0}
         run: |
           which python
           pip --version
@@ -136,13 +139,11 @@ jobs:
 
       - name: Test with pytest
         if: ${{ !(startsWith(matrix.os, 'ubuntu') && matrix.python == 3.9) }}
-        shell: bash -l {0}
         run: |
           pytest
 
       - name: Test with pytest (with coverage)
         if: ${{ startsWith(matrix.os, 'ubuntu') && matrix.python == 3.9 }}
-        shell: bash -l {0}
         run: |
           pytest --cov=moseq2_nlp --cov-report=xml tests/
 
