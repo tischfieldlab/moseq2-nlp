@@ -119,18 +119,18 @@ jobs:
 
       - name: Install moseq2-viz
         run: |
-          pip install -e ./repos/moseq2-viz
+          python -m pip install -e ./repos/moseq2-viz
 
       - name: Install dependencies
         run: |
-          pip install --editable .[dev]
+          python -m pip install --editable .[dev]
 
       - name: Print environment info
         if: always()
         shell: bash -l {0}
         run: |
           which python
-          which pip
+          pip --version
           conda info
           conda list
 
