@@ -126,9 +126,11 @@ jobs:
           pip install --editable .[dev]
 
       - name: Print environment info
+        if: always()
         shell: bash -l {0}
         run: |
           which python
+          which pip
           conda info
           conda list
 
