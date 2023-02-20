@@ -190,7 +190,6 @@ def make_phrases(data_path, save_dir, emissions, thresholds, iterations, min_cou
         iterations: int, number of times to aggregate syllables into higher-order units
         min_count: int, minimum # of times syllables has to appear overall to be included in analysis.
         scoring: str, which scoring method to use, either 'default' or 'npmi'
-
     """
     with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
         sentences = pickle.load(fn)
@@ -372,25 +371,6 @@ def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
         labels = pickle.load(fn)
 
     plot_latent(X, labels, method, save_path, perplexity=perplexity)
-
-#@cli.command(name="explain", help="use lime to explain classifier.")
-#@click.argument("classifier-path", type=click.Path(exists=True))
-#def lime_explain():
-#
-#    with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
-#        sentences = pickle.load(fn)
-#        if emissions: sentences = get_emissions(sentences)
-#
-#    with open(os.path.join(data_path, "labels.pkl"), "rb") as fn:
-#        labels = pickle.load(fn)
-#
-#    clf = pickle.load(open(filename, 'rb'))
-#
-#    class_names = list(set(labels))
-#    exp = Explainer(feature_name, clf, class_names,
-#                bow=True,
-#                custom_feature_map=None,
-#                **kwargs)
 
 @cli.command(name="animate-latent", help="animate path of unclassified data (e.g. syllables)")
 @click.argument("features-path", type=click.Path(exists=True))

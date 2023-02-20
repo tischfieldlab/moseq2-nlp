@@ -6,6 +6,7 @@ from tqdm import tqdm
 import pickle
 import os
 
+
 class BrownClusterer(object):
     """Object consolidating methjods associated with Brown clustering. Clusters elements in a sequence according to neighborhood statistics."""
 
