@@ -196,7 +196,6 @@ def train_regressor(
 
     n_labels = len(np.unique(labels))
 
-    # TODO: change max_iter to 2000 !
     params = {
         "cv": kf,
         "random_state": seed,
@@ -207,7 +206,7 @@ def train_regressor(
         "refit": True,
         "scoring": "accuracy",
         "tol": 1e-6,
-        "max_iter": 100,
+        "max_iter": 2000,
         "verbose": verbose,
     }
     # Load and train classifier

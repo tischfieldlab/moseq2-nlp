@@ -8,7 +8,6 @@ import ruamel.yaml as yaml
 from click.shell_completion import CompletionItem
 from numpy import mean
 
-
 # from https://stackoverflow.com/questions/46358797/
 # python-click-supply-arguments-and-options-from-a-configuration-file
 def command_with_config(config_file_param_name: str) -> Type[click.Command]:
@@ -238,7 +237,7 @@ def get_unique_list_elements(lst):
         if el not in unique_elements:
             unique_elements.append(el)
     return unique_elements
-
+    
 def mean_merge_dicts(dicts):
     """Matches the keys of a list of dicts and returns a new dict with averaged values.
 
