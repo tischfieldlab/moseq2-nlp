@@ -73,7 +73,7 @@ def save_brown_datasets(sentences, labels, save_dir, alpha=0.5, min_count=0):
     Args:
         sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
         labels: list, labels to save with each clustered dataset
-        save_dir: str, where to save each of the clustered datasets 
+        save_dir: str, where to save each of the clustered datasets
         alpha: float controling degree of Laplacian smoothing.
         min_count: int indicating the minimum number of instances a syllable must have to be included in the corpus.
     """
@@ -157,7 +157,7 @@ def save_phrase_datasets(sentences, thresholds, save_dir, iterations=1, min_coun
     Args:
         sentences: list of list of strings, sentences in which to detect phrases.
         thresholds: list of floats, thresholds for inclusion in phrases per iteration. Interpretation depends on scorer
-        save_dir: str, where to save all of the phrased datasets. 
+        save_dir: str, where to save all of the phrased datasets.
         iterations: int, number of passes of the phraser.
         min_count: int, minimum number of times a phrase has to appear to be included in phrase list
         scoring: str, one of two types of scoring methods, `default` or `npmi`

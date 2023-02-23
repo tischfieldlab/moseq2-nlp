@@ -15,7 +15,7 @@ class Explainer(object):
         __init__: instantiates explainer object with all potential feature keyword arguments.
         predict: gets probabilities of sentence features with the provided clasifier.
         explain_instance: returns word weightings from the LIME explainer for a single sentence.
-        explain_dataset: returns averaged word weights for all samples in a dataset, organized by class. 
+        explain_dataset: returns averaged word weights for all samples in a dataset, organized by class.
         format_sentences: transforms list of space-separated sentence strings into expected moseq-nlp format of list of list of strings.
     """
 
@@ -23,7 +23,7 @@ class Explainer(object):
         self, feature_name, classifier, class_names, bow=True, custom_feature_map=None, embedding_kwargs=None, **feature_map_kwargs
     ):
         """Instantiates explainer object with all potential feature keyword arguments.
-            
+
         Args:
             feature_name: str, name of feature map which  maps from sentences to features.
             classifier: sklearn classifier object for classifying feature_map features.
@@ -44,7 +44,7 @@ class Explainer(object):
 
     def predict(self, sentences):
         """Gets probabilities of sentence features with the provided clasifier.
-         
+
         Args:
             sentences: list of space-separated strings representing sentences.
 
@@ -106,7 +106,7 @@ class Explainer(object):
 
         Args:
             sentences: list of string of space-separated ints representing moseq syllables to be reformatted.
-        
+
         Returns:
             sentences: list of list of syllables (strings)
         """

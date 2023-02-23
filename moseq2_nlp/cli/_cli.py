@@ -11,6 +11,8 @@ from tqdm import tqdm
 
 import moseq2_nlp.train as trainer
 from moseq2_nlp.data import save_phrase_datasets, save_brown_datasets, get_emissions
+from moseq2_nlp.explain import Explainer
+
 from moseq2_nlp.gridsearch import (
     find_gridsearch_results,
     generate_grid_search_worker_params,
@@ -406,6 +408,111 @@ def animate_latent_cmd(features_path, model_file, index_file, method, save_path,
     sentence = sentence[animal_index]
 
     animate_latent_path(X, sentence, method, save_path, perplexity=perplexity)
+
+
+@cli.command(name="explain-classifier", help="explains the results of a classifier")
+@click.argument("data-path", type=click.Path(exists=True))
+@click.argument("clf-path", type=click.Path(exists=True))
+@click.argument("feature-name", type=click.Choice(["usages", "transitions", "embeddings"]))
+@click.option("--save-dir", type=str, default=".")
+@click.option("--num-samples", type=int, default=1000)
+@click.option("--max-syllable", type=int, default=70)
+@click.option("--bad-syllables", type=int, multiple=True, default=[-5])
+@click.option("--num-transitions", type=int, default=70)
+@click.option("--emissions", is_flag=True)
+@click.option("--min-count", type=int, default=1)
+@click.option("--negative", type=int, default=5)
+@click.option("--dm", default=2, type=IntChoice([0, 1, 2]))
+@click.option("--embedding-dim", type=int, default=70)
+@click.option("--embedding-window", type=int, default=4)
+@click.option("--embedding-epochs", type=int, default=250)
+@click.option("--seed", type=int, default=0)
+@click.option("--model_path", type=str, default="./dv.model")
+def explain_classifier(
+    data_path,
+    clf_path,
+    feature_name,
+    save_dir,
+    num_samples,
+    max_syllable,
+    bad_syllables,
+    num_transitions,
+    emissions,
+    min_count,
+    negative,
+    dm,
+    embedding_dim,
+    embedding_window,
+    embedding_epochs,
+    seed,
+    model_path,
+):
+    """Load a saved classifier and explain classifications using LIME.
+
+    Args:
+        data_path: str, path to dir where sentences and labels are saved.
+        clf_path: str, path to saved classifier
+        feature_name: str, type of feature map, one of `usages`, `transitions` or `embeddings`.
+        num_samples: int, number of samples for LIME.
+        save_dir: str, dir to save explanation results.
+        emissions: bool, whether or not to use emissions or frames
+        max_syllable: int, max syllables to include in analysis
+        num_transitions: int, max number of transitions to include in transition rep
+        min_count: int, minimum # of times syllables has to appear overall to be included in analysis
+        negative: int, exponent used for negative sampling in doc2vec
+        dm: literal (0,1,2) indicating which between cbow, dm or their average to use for doc2vec
+        embedding_dim: int, dimension of d2v embedding space
+        embedding_window: int, window size for d2v context
+        embedding_epochs: int, number of training steps for d2v
+        bad_syllables: list of ints, syllables to exclude
+        seed: int, seed for features
+        model_path: str, path where the dv model is saved.
+
+    """
+    # Load data
+    with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
+        sentences = pickle.load(fn)
+    if emissions:
+        sentences = get_emissions(sentences)
+
+    with open(os.path.join(data_path, "labels.pkl"), "rb") as fn:
+        labels = pickle.load(fn)
+
+    string_sentences = [" ".join(item for item in sentence) for sentence in sentences]
+
+    # Inference feature map args
+    if feature_name == "usages":
+        kwargs = {"max_syllable": max_syllable, "bad_syllables": bad_syllables}
+    elif feature_name == "transitions":
+        kwargs = {"max_syllable": max_syllable, "bad_syllables": bad_syllables, "num_transitions": num_transitions}
+    else:
+        kwargs = {}
+
+    # Embedding kwargs
+    embedding_kwargs = {
+        "dm": dm,
+        "embedding_dim": embedding_dim,
+        "embedding_window": embedding_window,
+        "embedding_epochs": embedding_epochs,
+        "min_count": min_count,
+        "negative": negative,
+        "seed": seed,
+        "model_path": model_path,
+    }
+    # Count vocab
+    n_vocab = len({s for sentence in sentences for s in sentence})
+
+    # Load classifier
+    clf = pickle.load(open(clf_path, "rb"))
+
+    # Initialize LIME explainer
+    class_names = list(set(labels))
+    exp = Explainer(feature_name, clf, class_names, bow=True, custom_feature_map=None, embedding_kwargs=embedding_kwargs, **kwargs)
+
+    # Explain classes and save
+    ds_explanation = exp.explain_dataset(string_sentences, labels, num_features=n_vocab, num_samples=num_samples)
+    with open(fn, "wb") as file:
+        pickle.dump(ds_explanation, os.path.join(save_dir, "explanation.pkl"))
 
 
 if __name__ == "__main__":
