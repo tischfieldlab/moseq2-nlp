@@ -178,7 +178,7 @@ def generate_train_config(output_file):
 @click.option("--thresholds", type=float, multiple=True, default=[0.1])
 @click.option("--iterations", type=int, default=1)
 @click.option("--min-count", type=int, default=1)
-@click.option("--scoring", type=str, default='default')
+@click.option("--scoring", type=str, default="default")
 def make_phrases(data_path, save_dir, emissions, thresholds, iterations, min_count, scoring):
     """Detect phrases and save them in a dict.
 
@@ -193,18 +193,20 @@ def make_phrases(data_path, save_dir, emissions, thresholds, iterations, min_cou
     """
     with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
         sentences = pickle.load(fn)
-        if emissions: sentences = get_emissions(sentences)
+        if emissions:
+            sentences = get_emissions(sentences)
 
     with open(os.path.join(data_path, "labels.pkl"), "rb") as fn:
         labels = pickle.load(fn)
 
     save_phrase_datasets(sentences, thresholds, save_dir, iterations=iterations, min_count=min_count, scoring=scoring)
 
+
 @cli.command(name="make-synonyms", help="finds and saves module clusters with Brown clustering")
 @click.argument("data-path", type=click.Path(exists=True))
 @click.argument("save-dir", type=click.Path(), default="./brown_synonyms")
 @click.option("--emissions", is_flag=True)
-@click.option("--alpha", type=float, default=.5)
+@click.option("--alpha", type=float, default=0.5)
 @click.option("--min-count", type=int, default=0)
 def make_synonyms(data_path, save_dir, emissions, alpha, min_count):
     """Detect Brown synonyms and save them according to different resolutions in save_dir.
@@ -219,12 +221,14 @@ def make_synonyms(data_path, save_dir, emissions, alpha, min_count):
     """
     with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
         sentences = pickle.load(fn)
-        if emissions: sentences = get_emissions(sentences)
+        if emissions:
+            sentences = get_emissions(sentences)
 
     with open(os.path.join(data_path, "labels.pkl"), "rb") as fn:
         labels = pickle.load(fn)
 
     save_brown_datasets(sentences, labels, save_dir, alpha, min_count)
+
 
 @cli.command(name="grid-search", help="grid search hyperparameters")
 @click.argument("scan_file", type=click.Path(exists=True))
@@ -371,6 +375,7 @@ def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
         labels = pickle.load(fn)
 
     plot_latent(X, labels, method, save_path, perplexity=perplexity)
+
 
 @cli.command(name="animate-latent", help="animate path of unclassified data (e.g. syllables)")
 @click.argument("features-path", type=click.Path(exists=True))

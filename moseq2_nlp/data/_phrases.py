@@ -66,7 +66,8 @@ class BrownClusterer(object):
 
         return res_dict
 
-def save_brown_datasets(sentences, labels, save_dir, alpha=.5, min_count=0):
+
+def save_brown_datasets(sentences, labels, save_dir, alpha=0.5, min_count=0):
     """Finds synonyms in a dataset of sentences and then saves clustered versions at different resolutions.
 
     Args:
@@ -80,33 +81,34 @@ def save_brown_datasets(sentences, labels, save_dir, alpha=.5, min_count=0):
     bc = BrownClusterer()
 
     # Make tree
-    print('Finding clusters.')
+    print("Finding clusters.")
     bc.make_brown_tree(sentences, alpha=alpha, min_count=min_count)
-   
+
     current_clusters = -1
-    print('Saving Brown clustered data.')
+    print("Saving Brown clustered data.")
     for resolution in tqdm(np.arange(1, bc.n_vocab)):
         res_clusters = bc.get_clusters_by_resolution(resolution)
         num_clusters = len(get_unique_list_elements(res_clusters.values()))
 
         if num_clusters == current_clusters:
-            print(f'Saved {resolution} clustered datasets.')
+            print(f"Saved {resolution} clustered datasets.")
             break
         else:
             current_clusters = num_clusters
             new_sentences = replace_words(sentences, res_clusters)
 
             # Make dir
-            res_dir = os.path.join(save_dir, f'data_resolution_{resolution}')
+            res_dir = os.path.join(save_dir, f"data_resolution_{resolution}")
             ensure_dir(res_dir)
-                
+
             # Save
-            names = ['sentences', 'labels', 'cluster_map'] 
-            res_clusters = [(k,v) for (k,v) in res_clusters.items()]
+            names = ["sentences", "labels", "cluster_map"]
+            res_clusters = [(k, v) for (k, v) in res_clusters.items()]
             for obj, nm in zip([new_sentences, labels, res_clusters], names):
-                res_path = os.path.join(res_dir, f'{nm}.pkl')
+                res_path = os.path.join(res_dir, f"{nm}.pkl")
                 with open(res_path, "wb") as handle:
                     pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 def replace_words(sentences, replacement_dict):
     """Replaces the symbols of a sentence according to the provided mapping. Can be used in conjunction with a phrasing algorithm to consolidate words into composite symbols.
@@ -130,7 +132,8 @@ def replace_words(sentences, replacement_dict):
         new_sentences.append(new_sentence)
     return new_sentences
 
-def find_phrases(sentences, min_count=1, threshold=1.0, scoring='default'):
+
+def find_phrases(sentences, min_count=1, threshold=1.0, scoring="default"):
     """Finds and returns a phrase model based on statistics from `sentences`.
 
     Args:
@@ -147,7 +150,8 @@ def find_phrases(sentences, min_count=1, threshold=1.0, scoring='default'):
     """
     return Phrases(sentences, min_count=min_count, threshold=threshold, scoring=scoring)
 
-def save_phrase_datasets(sentences, thresholds, save_dir, iterations=1, min_count=1, scoring='default'):
+
+def save_phrase_datasets(sentences, thresholds, save_dir, iterations=1, min_count=1, scoring="default"):
     """Iteratively groups words into phrases and saves each iteration as a dataset.
 
     Args:
@@ -159,14 +163,14 @@ def save_phrase_datasets(sentences, thresholds, save_dir, iterations=1, min_coun
         scoring: str, one of two types of scoring methods, `default` or `npmi`
 
     """
-    print('Finding phrases.')
+    print("Finding phrases.")
     for i in tqdm(range(iterations)):
         phrase_model = find_phrases(sentences, min_count=min_count, threshold=thresholds[i], scoring=scoring)
         sentences = [phrase_model[sentence] for sentence in sentences]
 
-        iter_dir = os.path.join(save_dir, f'phrase_iterations_{i + 1}')
+        iter_dir = os.path.join(save_dir, f"phrase_iterations_{i + 1}")
         ensure_dir(iter_dir)
 
-        phrase_path = os.path.join(iter_dir, 'sentences.pkl')
+        phrase_path = os.path.join(iter_dir, "sentences.pkl")
         with open(phrase_path, "wb") as handle:
             pickle.dump(sentences, handle, protocol=pickle.HIGHEST_PROTOCOL)
