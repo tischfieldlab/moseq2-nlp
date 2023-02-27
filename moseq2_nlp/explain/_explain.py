@@ -3,10 +3,8 @@ from moseq2_nlp.models import DocumentEmbedding
 from moseq2_nlp.data import get_usage_representation, get_transition_representation
 from moseq2_nlp.util import mean_merge_dicts
 import re
-import pdb
 from random import choice
 from tqdm import tqdm
-
 
 class Explainer(object):
     """Class which collects relevant methods from LimeTextExplainer for integration with Moseq-NLP.
@@ -99,6 +97,7 @@ class Explainer(object):
             ]
             instance_expls_dict = mean_merge_dicts(instance_expls)
             class_explanations[unique_label] = instance_expls_dict
+
         return class_explanations
 
     def reformat_sentences(self, sentences):
@@ -120,12 +119,12 @@ class Explainer(object):
             list_sentences = [list(filter(lambda s: int(s) not in bad_syllables, sentence)) for sentence in list_sentences]
 
         n_vocabs = [len(list(set(sentence))) for sentence in list_sentences]
-        good_sentences = [sentence for i, sentence in enumerate(list_sentences) if n_vocabs[i] > 1]
+        good_sentences = [sentence for i, sentence in enumerate(list_sentences) if n_vocabs[i] > 3]
 
         formatted_sentences = []
         for n_vocab, sentence in zip(n_vocabs, list_sentences):
             n_vocab = len(list(set(sentence)))
-            if n_vocab > 2:
+            if n_vocab > 3:
                 formatted_sentences.append(sentence)
             else:
                 formatted_sentences.append(choice(good_sentences))

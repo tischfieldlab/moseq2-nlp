@@ -25,7 +25,6 @@ from moseq2_nlp.util import IntChoice, command_with_config, ensure_dir, get_comm
 from moseq2_viz.util import parse_index
 from moseq2_viz.model.util import parse_model_results
 from moseq2_nlp.visualize import plot_latent, animate_latent_path
-import pdb
 
 # Here we will monkey-patch click Option __init__
 # in order to force showing default values for all options
@@ -70,6 +69,7 @@ def cli():
 @click.option("--penalty", default="l2", type=click.Choice(["l1", "l2", "elasticnet"]))
 @click.option("--num-c", type=int, default=11)
 @click.option("--multi_class", default="ovr", type=click.Choice(["ovr", "auto", "multinomial"]))
+@click.option("--max-iter", type=int, default=2000)
 @click.option("--seed", type=int, default=0)
 @click.option("--split-seed", type=int, default=0)
 @click.option("--verbose", type=int, default=0)
@@ -96,6 +96,7 @@ def train(
     penalty,
     num_c,
     multi_class,
+    max_iter,
     seed,
     split_seed,
     verbose,
@@ -125,6 +126,7 @@ def train(
         penalty: literal ('l2', 'l1', 'elasticnet') for regressor penalty temr
         num_c: int, number of regularizer weights chosen logarithmically between 1e-5 and 1e5 for classifier
         multi_class: literal ('ovr', 'auto', 'multinomial'), multiclass scheme for logistic regressor
+        max_iter: integer, maximum number of steps for classifier training
         seed: int, seed for features
         split_seed: int, seed for train-test split
         verbose: int, 0 for no messages
@@ -153,6 +155,7 @@ def train(
         num_c,
         multi_class,
         kernel,
+        max_iter,
         seed,
         split_seed,
         verbose,
@@ -357,7 +360,7 @@ def moseq_to_raw(model_file, index_file, data_dir):
 @click.argument("features-path", type=click.Path(exists=True))
 @click.argument("labels-path", type=click.Path(exists=True))
 @click.option("--method", type=click.Choice(["pca", "tsne", "umap"]), default="pca")
-@click.option("--save-path", type=click.Path(exists=True), default="./z.png")
+@click.option("--save-path", default="./z.png")
 @click.option("--perplexity", type=float, default=3.0)
 def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
     """Plot pca/tsne/umap of features.

@@ -51,6 +51,7 @@ def train(
     num_c: int,
     multi_class: str,
     kernel: str,
+    max_iter: int,
     seed: int,
     split_seed: Optional[int] = None,
     verbose: int = 0,
@@ -79,6 +80,7 @@ def train(
         num_c: int, how many regularizers to gridsearch over in cross validation, logarithmically spaced between [1e-5 and 1e5]
         multi_class: string determining which multiclass scheme to use for the logistic regressor (see sklearn docs)
         kernel:  string determining which type of `svm` kernel should be used (see sklearn docs)
+        max_iter: integer, maximum number of iterations for classifier
         seed: int, random seed for feature learning
         split_seed: int, random seed for the train-test split
         verbose: int controling verbosity of sklearn classifiers
@@ -138,9 +140,9 @@ def train(
     print("Training classifier")
     if classifier == "logistic_regressor":
         # Train logistic regressor and CV over C using validation data from the training set.
-        clf = train_regressor(X_train, y_train, K, penalty, num_c, seed, multi_class, verbose=verbose)
+        clf = train_regressor(X_train, y_train, K, penalty, num_c, max_iter, seed, multi_class, verbose=verbose)
     elif classifier == "svm":
-        clf = train_svm(X_train, y_train, K, penalty, num_c, seed, verbose=verbose)
+        clf = train_svm(X_train, y_train, K, penalty, num_c, max_iter, seed, verbose=verbose)
     else:
         raise ValueError(f"Classifier {classifier} not recognized")
 
@@ -154,6 +156,9 @@ def train(
     cm_test = confusion_matrix(y_test, y_pred_test, labels=unique_labels)
 
     times["Classifier"] = time.time() - start
+
+    # Save classifier
+    pickle.dump(clf, open(os.path.join(exp_dir, "clf.sav"), "wb"))
 
     save_dict["model_performance_train"] = {f"classification_report": report_train}
     save_dict["model_performance_test"] = {f"classification_report": report_test}
@@ -171,7 +176,15 @@ def train(
 
 
 def train_regressor(
-    features, labels, K: int, penalty: Penalty, num_c: int, seed: int, multi_class: Literal["auto", "multi_class", "ovr"], verbose: int = 0
+    features,
+    labels,
+    K: int,
+    penalty: Penalty,
+    num_c: int,
+    max_iter: int,
+    seed: int,
+    multi_class: Literal["auto", "multi_class", "ovr"],
+    verbose: int = 0,
 ):
     """Trains a Kfold cross-validated logistic regressor and returns fitted classifier.
 
@@ -181,6 +194,7 @@ def train_regressor(
         K: integer number of splits for cross validation
         penalty: literal indicating which sort of regularization to use, `l1`, `l2` or `elasticnet``
         num_c: integer number of regularizer constants to search over, logarithmically spaced between 1e-5 and 1e5
+        max_iter: integer, maximum number of iterations for classifier
         seed: integer random seed for the classifier initialization
         multi_class: literal indicating which multi-class scheme to use, `auto`, `multi_class` or `ovr`. See sklearn docs
         verbose: integer controlling verbosity of classifier. Set to 0 for no messages.
@@ -206,7 +220,7 @@ def train_regressor(
         "refit": True,
         "scoring": "accuracy",
         "tol": 1e-6,
-        "max_iter": 2000,
+        "max_iter": max_iter,
         "verbose": verbose,
     }
     # Load and train classifier
@@ -216,7 +230,7 @@ def train_regressor(
     return LogisticRegressionCV(**params).fit(features, labels)
 
 
-def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int, verbose: int = 0):
+def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, max_iter: int, seed: int, verbose: int = 0):
     """Trains a Kfold cross-validated SVM and returns fitted classifier.
 
     Args:
@@ -225,6 +239,7 @@ def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int,
         K: integer number of splits for cross validation
         penalty: literal indicating which sort of regularization to use, `l1`, `l2` or `elasticnet``
         num_c: integer number of regularizer constants to search over, logarithmically spaced between 1e-5 and 1e5
+        max_iter: integer, maximum number of iterations for classifier
         seed: integer random seed for the classifier initialization
         verbose: integer controlling verbosity of classifier. Set to 0 for no messages.
 
@@ -240,7 +255,7 @@ def train_svm(features, labels, K: int, penalty: Penalty, num_c: int, seed: int,
     param_grid = {"C": Cs, "kernel": kernels}
     kf = min(int(len(labels) / float(K)), min_exemplars)
 
-    svc_params = {"class_weight": "balanced", "tol": 1e-6, "max_iter": 2000, "probability": True, "verbose": verbose}
+    svc_params = {"class_weight": "balanced", "tol": 1e-6, "max_iter": max_iter, "probability": True, "verbose": verbose}
     gs_params = {"cv": kf, "refit": True, "scoring": "accuracy", "verbose": verbose}
 
     return GridSearchCV(SVC(**svc_params), param_grid, **gs_params).fit(features, labels)

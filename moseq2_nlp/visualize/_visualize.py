@@ -7,13 +7,12 @@ plt.style.use("ggplot")
 from matplotlib.lines import Line2D
 import matplotlib
 import matplotlib.animation as animation
+import matplotlib.cm as cm
 import os
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from moseq2_nlp.util import get_unique_list_elements
 import umap
-
-all_colors = ["red", "blue", "green", "yellow", "orange", "purple", "gray", "pink", "cyan", "magenta", "black"]
 
 
 def dim_red(X, method, **kwargs):
@@ -59,20 +58,19 @@ def plot_latent(X, labels, method, save_path, **kwargs):
         dim_red
     """
     unique_labels = get_unique_list_elements(labels)
-    colors = all_colors[: len(unique_labels)]
 
     z = dim_red(X, method, **kwargs)
 
-    z_colors = [all_colors[unique_labels.index(label)] for label in labels]
-
     fig, ax = plt.subplots()
+    legend_elements = []
+    colors = cm.rainbow(np.linspace(0, 1, len(unique_labels)))
+    for label, color in zip(unique_labels, colors):
+        z_subtype = np.array([zz for i, zz in enumerate(z) if labels[i] == label])
+        ax.scatter(z_subtype[:, 0], z_subtype[:, 1], color=color, alpha=0.5)
 
-    ax.scatter(z[:, 0], z[:, 1], c=z_colors, alpha=0.5)
-
-    legend_elements = [
-        Line2D([0], [0], marker="o", color=color, label=label, markerfacecolor=color, markersize=15, linestyle=None, linewidth=0)
-        for (color, label) in zip(colors, unique_labels)
-    ]
+        legend_elements.append(
+            Line2D([0], [0], marker="o", color=color, label=label, markerfacecolor=color, markersize=15, linestyle=None, linewidth=0)
+        )
 
     ax.legend(handles=legend_elements)
 
