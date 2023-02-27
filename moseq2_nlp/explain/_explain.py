@@ -6,6 +6,7 @@ import re
 from random import choice
 from tqdm import tqdm
 
+
 class Explainer(object):
     """Class which collects relevant methods from LimeTextExplainer for integration with Moseq-NLP.
 
