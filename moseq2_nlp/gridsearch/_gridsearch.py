@@ -190,14 +190,14 @@ def get_gridsearch_default_scans() -> List:
         {"parameters": {"representation": "usages"}},
         {
             "parameters": {"representation": "transitions"},
-            "scan": [{"parameter": "num_transitions", "type": "int", "scale": "log", "range": [70, 4900, 8]}],
+            "scan": [{"parameter": "num_transitions", "type": "int", "scale": "linear", "range": [10, 300, 10]}],
         },
         {
             "parameters": {"representation": "embeddings"},
             "scan": [
                 {"parameter": "emissions", "type": "bool", "scale": "list", "range": [True, False]},
                 {"parameter": "embedding_window", "type": "int", "scale": "list", "range": [2, 4, 8, 16, 32, 64]},
-                {"parameter": "embedding_dim", "type": "int", "scale": "log", "range": [70, 4900, 8]},
+                {"parameter": "embedding_dim", "type": "int", "scale": "linear", "range": [10, 300, 10]},
                 {"parameter": "embedding_epochs", "type": "int", "scale": "list", "range": [50, 100, 150, 200, 250]},
             ],
         },
