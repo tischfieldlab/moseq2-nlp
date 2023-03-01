@@ -8,7 +8,7 @@ import pdb
 
 def make_dummy_data():
     num_sentences = np.random.randint(10, 100)
-    num_labels = np.random.randint(0, 10)
+    num_labels = np.random.randint(1, 10)
     sentences = [[str(syl) for syl in np.random.randint(0, 100, size=np.random.randint(10, 100))] for _ in range(num_sentences)]
     labels = np.random.randint(0, num_labels, size=num_sentences)
     return sentences, labels
