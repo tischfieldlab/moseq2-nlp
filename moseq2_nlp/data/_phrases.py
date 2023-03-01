@@ -174,6 +174,6 @@ def save_phrase_datasets(sentences, labels, thresholds, save_dir, iterations=1, 
 
         phrase_path = os.path.join(iter_dir, "sentences.pkl")
         label_path = os.path.join(iter_dir, "labels.pkl")
-        for nm, dt in zip([phrase_path, label_path],[sentences, labels]):
+        for nm, dt in zip([phrase_path, label_path], [sentences, labels]):
             with open(nm, "wb") as fn:
                 pickle.dump(dt, fn, protocol=pickle.HIGHEST_PROTOCOL)
