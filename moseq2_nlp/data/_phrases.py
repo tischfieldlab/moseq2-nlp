@@ -151,11 +151,12 @@ def find_phrases(sentences, min_count=1, threshold=1.0, scoring="default"):
     return Phrases(sentences, min_count=min_count, threshold=threshold, scoring=scoring)
 
 
-def save_phrase_datasets(sentences, thresholds, save_dir, iterations=1, min_count=1, scoring="default"):
+def save_phrase_datasets(sentences, labels, thresholds, save_dir, iterations=1, min_count=1, scoring="default"):
     """Iteratively groups words into phrases and saves each iteration as a dataset.
 
     Args:
         sentences: list of list of strings, sentences in which to detect phrases.
+        labels: list, labels to save with each clustered dataset
         thresholds: list of floats, thresholds for inclusion in phrases per iteration. Interpretation depends on scorer
         save_dir: str, where to save all of the phrased datasets.
         iterations: int, number of passes of the phraser.
@@ -172,5 +173,7 @@ def save_phrase_datasets(sentences, thresholds, save_dir, iterations=1, min_coun
         ensure_dir(iter_dir)
 
         phrase_path = os.path.join(iter_dir, "sentences.pkl")
-        with open(phrase_path, "wb") as handle:
-            pickle.dump(sentences, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        label_path = os.path.join(iter_dir, "labels.pkl")
+        for nm, dt in zip([phrase_path, label_path],[sentences, labels]):
+            with open(nm, "wb") as fn:
+                pickle.dump(dt, fn, protocol=pickle.HIGHEST_PROTOCOL)

@@ -41,6 +41,31 @@ class DataTest(unittest.TestCase):
                 subprocess.call(f"rm -rf {save_dir}", shell=True)
         subprocess.call(f"rm ./sentences.pkl ./labels.pkl", shell=True)
 
+    def test_synonyms(self):
+        sentences, labels = make_dummy_data()
+
+        sentences_fn = "./sentences.pkl"
+        labels_fn = "./labels.pkl"
+
+        for nm, dt in zip([sentences_fn, labels_fn], [sentences, labels]):
+            with open(nm, "wb") as fn:
+                pickle.dump(dt, fn)
+
+        data_path = "."
+        save_dir = "./synonyms"
+        emissions = [True, False]
+
+        for em in emissions:
+            process_string = f"moseq2-nlp make-synonyms {data_path} {save_dir}"
+            if em:
+                process_string += " --emissions"
+            subprocess.call(process_string, shell=True)
+            for dr in os.listdir(save_dir):
+                self.assertTrue(os.path.exists(os.path.join(save_dir, dr, "sentences.pkl")))
+                self.assertTrue(os.path.exists(os.path.join(save_dir, dr, "labels.pkl")))
+            subprocess.call(f"rm -rf {save_dir}", shell=True)
+        subprocess.call(f"rm ./sentences.pkl ./labels.pkl", shell=True)
+
 
 if __name__ == "__main__":
     unittest.main()
