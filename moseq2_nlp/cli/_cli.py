@@ -196,6 +196,8 @@ def make_phrases(data_path, save_dir, emissions, thresholds, iterations, min_cou
         min_count: int, minimum # of times syllables has to appear overall to be included in analysis.
         scoring: str, which scoring method to use, either 'default' or 'npmi'
     """
+    ensure_dir(save_dir)
+
     with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
         sentences = pickle.load(fn)
         if emissions:
