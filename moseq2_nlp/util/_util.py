@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Sequence, Type
 import click
 import ruamel.yaml as yaml
 from click.shell_completion import CompletionItem
+from numpy import mean
 
 
 # from https://stackoverflow.com/questions/46358797/
@@ -237,3 +238,22 @@ def get_unique_list_elements(lst):
         if el not in unique_elements:
             unique_elements.append(el)
     return unique_elements
+
+
+def mean_merge_dicts(dicts):
+    """Matches the keys of a list of dicts and returns a new dict with averaged values.
+
+    Args:
+        dicts: list of dicts, dictionaries to be merged with values as numpy arrays
+
+    Returns:
+        merged_dict: dict, dictionary with merged values from dicts
+    """
+    merged_dict = {}
+    for dct in dicts:
+        for key, val in dct.items():
+            if key in merged_dict.keys():
+                merged_dict[key] = mean([merged_dict[key], val])
+            else:
+                merged_dict[key] = val
+    return merged_dict

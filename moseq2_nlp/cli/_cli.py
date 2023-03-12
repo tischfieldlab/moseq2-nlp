@@ -10,7 +10,9 @@ from numpy.random import choice, randint
 from tqdm import tqdm
 
 import moseq2_nlp.train as trainer
-from moseq2_nlp.data import make_phrases_dataset
+from moseq2_nlp.data import save_phrase_datasets, save_brown_datasets, get_emissions
+from moseq2_nlp.explain import Explainer
+
 from moseq2_nlp.gridsearch import (
     find_gridsearch_results,
     generate_grid_search_worker_params,
@@ -23,7 +25,6 @@ from moseq2_nlp.util import IntChoice, command_with_config, ensure_dir, get_comm
 from moseq2_viz.util import parse_index
 from moseq2_viz.model.util import parse_model_results
 from moseq2_nlp.visualize import plot_latent, animate_latent_path
-import pdb
 
 # Here we will monkey-patch click Option __init__
 # in order to force showing default values for all options
@@ -68,6 +69,7 @@ def cli():
 @click.option("--penalty", default="l2", type=click.Choice(["l1", "l2", "elasticnet"]))
 @click.option("--num-c", type=int, default=11)
 @click.option("--multi_class", default="ovr", type=click.Choice(["ovr", "auto", "multinomial"]))
+@click.option("--max-iter", type=int, default=2000)
 @click.option("--seed", type=int, default=0)
 @click.option("--split-seed", type=int, default=0)
 @click.option("--verbose", type=int, default=0)
@@ -94,6 +96,7 @@ def train(
     penalty,
     num_c,
     multi_class,
+    max_iter,
     seed,
     split_seed,
     verbose,
@@ -123,6 +126,7 @@ def train(
         penalty: literal ('l2', 'l1', 'elasticnet') for regressor penalty temr
         num_c: int, number of regularizer weights chosen logarithmically between 1e-5 and 1e5 for classifier
         multi_class: literal ('ovr', 'auto', 'multinomial'), multiclass scheme for logistic regressor
+        max_iter: integer, maximum number of steps for classifier training
         seed: int, seed for features
         split_seed: int, seed for train-test split
         verbose: int, 0 for no messages
@@ -151,6 +155,7 @@ def train(
         num_c,
         multi_class,
         kernel,
+        max_iter,
         seed,
         split_seed,
         verbose,
@@ -173,28 +178,65 @@ def generate_train_config(output_file):
 
 @cli.command(name="make-phrases", help="finds and saves compound modules")
 @click.argument("data-path", type=click.Path(exists=True))
-@click.option("--save-path", type=click.Path(), default="./all_phrases.pkl")
-@click.option("--threshes", type=float, multiple=True, default=[0.001, 0.001])
-@click.option("--n", type=int, default=2)
-@click.option("--min-count", type=int, default=2)
-def make_phrases(data_path, save_path, threshes, n, min_count):
+@click.option("--save-dir", type=click.Path(), default="./phrases")
+@click.option("--emissions", is_flag=True)
+@click.option("--thresholds", type=float, multiple=True, default=[0.1])
+@click.option("--iterations", type=int, default=1)
+@click.option("--min-count", type=int, default=1)
+@click.option("--scoring", type=str, default="default")
+def make_phrases(data_path, save_dir, emissions, thresholds, iterations, min_count, scoring):
     """Detect phrases and save them in a dict.
 
     Args:
         data_path: str, where sentences and labels are saved
-        save_path: str, where to save the phrases dict
-        threshes: list of floats, indicating threshholds for phrase detection
-        n: int, number of times to aggregate syllables into higher-order units
+        save_dir: str, where to save the phrases dict
+        emissions: bool, if true, use emissions
+        thresholds: list of floats, indicating threshholds for phrase detection
+        iterations: int, number of times to aggregate syllables into higher-order units
         min_count: int, minimum # of times syllables has to appear overall to be included in analysis.
-
+        scoring: str, which scoring method to use, either 'default' or 'npmi'
     """
+    ensure_dir(save_dir)
+
     with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
         sentences = pickle.load(fn)
+        if emissions:
+            sentences = get_emissions(sentences)
 
     with open(os.path.join(data_path, "labels.pkl"), "rb") as fn:
         labels = pickle.load(fn)
 
-    make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count)
+    save_phrase_datasets(sentences, labels, thresholds, save_dir, iterations=iterations, min_count=min_count, scoring=scoring)
+
+
+@cli.command(name="make-synonyms", help="finds and saves module clusters with Brown clustering")
+@click.argument("data-path", type=click.Path(exists=True))
+@click.argument("save-dir", type=click.Path(), default="./brown_synonyms")
+@click.option("--emissions", is_flag=True)
+@click.option("--alpha", type=float, default=0.5)
+@click.option("--min-count", type=int, default=0)
+def make_synonyms(data_path, save_dir, emissions, alpha, min_count):
+    """Detect Brown synonyms and save them according to different resolutions in save_dir.
+
+    Args:
+        data_path: str, where sentences and labels are saved
+        save_dir: str, where to save the synonym dict
+        emissions: bool, if true, use emissions
+        alpha: float, Laplacian smoothing coefficient for Brown clusterer
+        min_count: int, minimum # of times syllables has to appear overall to be included in analysis.
+
+    """
+    ensure_dir(save_dir)
+
+    with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
+        sentences = pickle.load(fn)
+        if emissions:
+            sentences = get_emissions(sentences)
+
+    with open(os.path.join(data_path, "labels.pkl"), "rb") as fn:
+        labels = pickle.load(fn)
+
+    save_brown_datasets(sentences, labels, save_dir, alpha, min_count)
 
 
 @cli.command(name="grid-search", help="grid search hyperparameters")
@@ -322,7 +364,7 @@ def moseq_to_raw(model_file, index_file, data_dir):
 @click.argument("features-path", type=click.Path(exists=True))
 @click.argument("labels-path", type=click.Path(exists=True))
 @click.option("--method", type=click.Choice(["pca", "tsne", "umap"]), default="pca")
-@click.option("--save-path", type=click.Path(exists=True), default="./z.png")
+@click.option("--save-path", default="./z.png")
 @click.option("--perplexity", type=float, default=3.0)
 def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
     """Plot pca/tsne/umap of features.
@@ -373,6 +415,111 @@ def animate_latent_cmd(features_path, model_file, index_file, method, save_path,
     sentence = sentence[animal_index]
 
     animate_latent_path(X, sentence, method, save_path, perplexity=perplexity)
+
+
+@cli.command(name="explain-classifier", help="explains the results of a classifier")
+@click.argument("data-path", type=click.Path(exists=True))
+@click.argument("clf-path", type=click.Path(exists=True))
+@click.argument("feature-name", type=click.Choice(["usages", "transitions", "embeddings"]))
+@click.option("--save-dir", type=str, default=".")
+@click.option("--num-samples", type=int, default=1000)
+@click.option("--max-syllable", type=int, default=70)
+@click.option("--bad-syllables", type=int, multiple=True, default=[-5])
+@click.option("--num-transitions", type=int, default=70)
+@click.option("--emissions", is_flag=True)
+@click.option("--min-count", type=int, default=1)
+@click.option("--negative", type=int, default=5)
+@click.option("--dm", default=2, type=IntChoice([0, 1, 2]))
+@click.option("--embedding-dim", type=int, default=70)
+@click.option("--embedding-window", type=int, default=4)
+@click.option("--embedding-epochs", type=int, default=250)
+@click.option("--seed", type=int, default=0)
+@click.option("--model_path", type=str, default="./dv.model")
+def explain_classifier(
+    data_path,
+    clf_path,
+    feature_name,
+    save_dir,
+    num_samples,
+    max_syllable,
+    bad_syllables,
+    num_transitions,
+    emissions,
+    min_count,
+    negative,
+    dm,
+    embedding_dim,
+    embedding_window,
+    embedding_epochs,
+    seed,
+    model_path,
+):
+    """Load a saved classifier and explain classifications using LIME.
+
+    Args:
+        data_path: str, path to dir where sentences and labels are saved.
+        clf_path: str, path to saved classifier
+        feature_name: str, type of feature map, one of `usages`, `transitions` or `embeddings`.
+        num_samples: int, number of samples for LIME.
+        save_dir: str, dir to save explanation results.
+        emissions: bool, whether or not to use emissions or frames
+        max_syllable: int, max syllables to include in analysis
+        num_transitions: int, max number of transitions to include in transition rep
+        min_count: int, minimum # of times syllables has to appear overall to be included in analysis
+        negative: int, exponent used for negative sampling in doc2vec
+        dm: literal (0,1,2) indicating which between cbow, dm or their average to use for doc2vec
+        embedding_dim: int, dimension of d2v embedding space
+        embedding_window: int, window size for d2v context
+        embedding_epochs: int, number of training steps for d2v
+        bad_syllables: list of ints, syllables to exclude
+        seed: int, seed for features
+        model_path: str, path where the dv model is saved.
+
+    """
+    # Load data
+    with open(os.path.join(data_path, "sentences.pkl"), "rb") as fn:
+        sentences = pickle.load(fn)
+    if emissions:
+        sentences = get_emissions(sentences)
+
+    with open(os.path.join(data_path, "labels.pkl"), "rb") as fn:
+        labels = pickle.load(fn)
+
+    string_sentences = [" ".join(item for item in sentence) for sentence in sentences]
+
+    # Inference feature map args
+    if feature_name == "usages":
+        kwargs = {"max_syllable": max_syllable, "bad_syllables": bad_syllables}
+    elif feature_name == "transitions":
+        kwargs = {"max_syllable": max_syllable, "bad_syllables": bad_syllables, "num_transitions": num_transitions}
+    else:
+        kwargs = {}
+
+    # Embedding kwargs
+    embedding_kwargs = {
+        "dm": dm,
+        "embedding_dim": embedding_dim,
+        "embedding_window": embedding_window,
+        "embedding_epochs": embedding_epochs,
+        "min_count": min_count,
+        "negative": negative,
+        "seed": seed,
+        "model_path": model_path,
+    }
+    # Count vocab
+    n_vocab = len({s for sentence in sentences for s in sentence})
+
+    # Load classifier
+    clf = pickle.load(open(clf_path, "rb"))
+
+    # Initialize LIME explainer
+    class_names = list(set(labels))
+    exp = Explainer(feature_name, clf, class_names, bow=True, custom_feature_map=None, embedding_kwargs=embedding_kwargs, **kwargs)
+
+    # Explain classes and save
+    ds_explanation = exp.explain_dataset(string_sentences, labels, num_features=n_vocab, num_samples=num_samples)
+    with open(fn, "wb") as file:
+        pickle.dump(ds_explanation, os.path.join(save_dir, "explanation.pkl"))
 
 
 if __name__ == "__main__":
