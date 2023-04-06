@@ -1,8 +1,8 @@
 from lime.lime_text import LimeTextExplainer
 from moseq2_nlp.models import DocumentEmbedding
 from moseq2_nlp.data import get_usage_representation, get_transition_representation
+from moseq2_nlp.util import mean_merge_dicts
 import re
-import pdb
 from random import choice
 from tqdm import tqdm
 
@@ -54,11 +54,12 @@ class Explainer(object):
         features = self.feature_map(sentences, **self.feature_map_kwargs)
         return self.clf.predict_proba(features)
 
-    def explain_instance(self, sentence, num_samples=1000):
+    def explain_instance(self, sentence, num_features=10, num_samples=1000):
         """Returns word weightings from the LIME explainer for a single sentence.
 
         Args:
             sentence: string of space-separated ints representing moseq syllables.
+            num_features: int, maximum number of features used in the explanation
             num_samples: number of randomly ablated versions of sentence to use to approximate feature landscape.
 
         Returns:
@@ -67,13 +68,14 @@ class Explainer(object):
         See Also:
             LimeTextExplainer
         """
-        return self.explainer.explain_instance(sentence, self.predict, num_samples=num_samples)
+        return self.explainer.explain_instance(sentence, self.predict, num_features=num_features, num_samples=num_samples)
 
-    def explain_dataset(self, sentences, labels, num_samples=1000):
+    def explain_dataset(self, sentences, labels, num_features=10, num_samples=1000):
         """Returns word weightings from the LIME explainer for a full data set, averaged per class.
 
         Args:
             sentences: list of string of space-separated ints representing moseq syllables.
+            num_features: int, maximum number of features used in the explanation
             num_samples: number of randomly ablated versions of sentence to use to approximate feature landscape.
 
         Returns:
@@ -86,10 +88,17 @@ class Explainer(object):
         for unique_label in tqdm(self.class_names):
             class_sentences = [sentence for i, sentence in enumerate(sentences) if labels[i] == unique_label]
             instance_expls = [
-                self.explainer.explain_instance(sentence, self.predict, num_samples=num_samples).as_list() for sentence in class_sentences
+                {
+                    k: v
+                    for (k, v) in self.explainer.explain_instance(
+                        sentence, self.predict, num_features=num_features, num_samples=num_samples
+                    ).as_list()
+                }
+                for sentence in class_sentences
             ]
-            instance_expls_dict = {k: v for d in instance_expls for (k, v) in d}
+            instance_expls_dict = mean_merge_dicts(instance_expls)
             class_explanations[unique_label] = instance_expls_dict
+
         return class_explanations
 
     def reformat_sentences(self, sentences):
@@ -111,12 +120,12 @@ class Explainer(object):
             list_sentences = [list(filter(lambda s: int(s) not in bad_syllables, sentence)) for sentence in list_sentences]
 
         n_vocabs = [len(list(set(sentence))) for sentence in list_sentences]
-        good_sentences = [sentence for i, sentence in enumerate(list_sentences) if n_vocabs[i] > 1]
+        good_sentences = [sentence for i, sentence in enumerate(list_sentences) if n_vocabs[i] > 3]
 
         formatted_sentences = []
         for n_vocab, sentence in zip(n_vocabs, list_sentences):
             n_vocab = len(list(set(sentence)))
-            if n_vocab > 2:
+            if n_vocab > 3:
                 formatted_sentences.append(sentence)
             else:
                 formatted_sentences.append(choice(good_sentences))
@@ -161,4 +170,3 @@ class Explainer(object):
             self.feature_map = model.predict
         else:
             self.feature_map = custom_feature_map
->>>>>>> 69df8cbc9d589cf76c658e3453746768e435a8ee

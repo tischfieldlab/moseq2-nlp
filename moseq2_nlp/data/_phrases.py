@@ -1,39 +1,40 @@
 import numpy as np
-from moseq2_nlp.util import get_unique_list_elements
-from gensim.models.phrases import original_scorer
+from moseq2_nlp.util import get_unique_list_elements, ensure_dir
+from gensim.models.phrases import Phrases
 from brown_clustering import BigramCorpus, BrownClustering
 from tqdm import tqdm
+import pickle
+import os
+
 
 class BrownClusterer(object):
-    """Object consolidating methjods associated with Brown clustering. Clusters elements in a sequence according to neighborhood statistics. 
-    """
+    """Object consolidating methjods associated with Brown clustering. Clusters elements in a sequence according to neighborhood statistics."""
 
     def make_corpus(self, sentences, alpha=0.0, min_count=0):
-        """Converts sentences to a bigram corpus object. 
+        """Converts sentences to a bigram corpus object.
 
         Args:
-            sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. 
-            alpha: float controling degree of Laplacian smoothing. 
+            sentences: a list of list of strings. Each sublist contains all of the syllables for an animal.
+            alpha: float controling degree of Laplacian smoothing.
             min_count: int indicating the minimum number of instances a syllable must have to be included in the corpus
 
         Returns:
             corpus: BigramCorpus object
         """
-
         corpus = BigramCorpus(sentences, alpha=alpha, min_count=min_count)
 
         self.corpus = corpus
+        self.n_vocab = len(self.corpus.vocabulary)
         return corpus
 
     def make_brown_tree(self, sentences, alpha=0.0, min_count=0):
-        """ Progressively clusters data into larger groups, aggregating each step into a binary tree. 
+        """Progressively clusters data into larger groups, aggregating each step into a binary tree.
 
         Args:
             sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
-            alpha: float controling degree of Laplacian smoothing. 
+            alpha: float controling degree of Laplacian smoothing.
             min_count: int indicating the minimum number of instances a syllable must have to be included in the corpus
         """
-
         corpus = self.make_corpus(sentences, alpha=alpha, min_count=min_count)
 
         num_vocab = len(corpus.vocabulary)
@@ -45,196 +46,134 @@ class BrownClusterer(object):
         self.clustering.train()
 
     def get_clusters_by_resolution(self, resolution):
-        """Returns a clustering of sentence data at a given depth of the Brown tree. Higher resolution means more clusters. 
+        """Returns a clustering of sentence data at a given depth of the Brown tree. Higher resolution means more clusters.
 
         Args:
-            resolution: level at which to read a clustering. Higher means more clusters. 
+            resolution: level at which to read a clustering. Higher means more clusters.
 
-        Returns: 
+        Returns:
             res_dict: dictionary which maps from a syllable name to its cluster id at the given resolution
         """
+        if not hasattr(self, "clustering"):
+            raise ValueError("Sentences have not been clustered. Please run `cluster`.")
 
-        if not hasattr(self,'clustering'):
-            raise ValueError('Sentences have not been clustered. Please run `cluster`.')
-
-        res_codes = [code[:resolution - 1] for code in self.clustering.codes().values()]
+        res_codes = [code[: resolution - 1] for code in self.clustering.codes().values()]
         res_dict = {}
 
         for res_code, (word, code) in zip(res_codes, self.clustering.codes().items()):
-            if res_code == code[:resolution-1]:
+            if res_code == code[: resolution - 1]:
                 res_dict[word] = res_code
 
         return res_dict
 
+
+def save_brown_datasets(sentences, labels, save_dir, alpha=0.5, min_count=0):
+    """Finds synonyms in a dataset of sentences and then saves clustered versions at different resolutions.
+
+    Args:
+        sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
+        labels: list, labels to save with each clustered dataset
+        save_dir: str, where to save each of the clustered datasets
+        alpha: float controling degree of Laplacian smoothing.
+        min_count: int indicating the minimum number of instances a syllable must have to be included in the corpus.
+    """
+    # Instantiate BC
+    bc = BrownClusterer()
+
+    # Make tree
+    print("Finding clusters.")
+    bc.make_brown_tree(sentences, alpha=alpha, min_count=min_count)
+
+    current_clusters = -1
+    print("Saving Brown clustered data.")
+    for resolution in tqdm(np.arange(1, bc.n_vocab)):
+        res_clusters = bc.get_clusters_by_resolution(resolution)
+        num_clusters = len(get_unique_list_elements(res_clusters.values()))
+
+        if num_clusters == current_clusters:
+            print(f"Saved {resolution} clustered datasets.")
+            break
+        else:
+            current_clusters = num_clusters
+            new_sentences = replace_words(sentences, res_clusters)
+
+            # Make dir
+            res_dir = os.path.join(save_dir, f"data_resolution_{resolution}")
+            ensure_dir(res_dir)
+
+            # Save
+            names = ["sentences", "labels", "cluster_map"]
+            res_clusters = [(k, v) for (k, v) in res_clusters.items()]
+            for obj, nm in zip([new_sentences, labels, res_clusters], names):
+                res_path = os.path.join(res_dir, f"{nm}.pkl")
+                with open(res_path, "wb") as handle:
+                    pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
 def replace_words(sentences, replacement_dict):
-    """Replaces the symbols of a sentence according to the provided mapping. Can be used in conjunction with a phrasing algorithm to consolidate words into composite symbols. 
+    """Replaces the symbols of a sentence according to the provided mapping. Can be used in conjunction with a phrasing algorithm to consolidate words into composite symbols.
 
-        Args:
-            sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
-            replacement_dict: a dictionary which maps from the sentence syllable to new symbols.  
+    Args:
+        sentences: a list of list of strings. Each sublist contains all of the syllables for an animal. The full list contains all animals.
+        replacement_dict: a dictionary which maps from the sentence syllable to new symbols.
 
-        Returns: 
-            new_sentences: sentences with replaced symbols
-     """
-
+    Returns:
+        new_sentences: sentences with replaced symbols
+    """
     new_sentences = []
 
     for sentence in sentences:
-        new_sentence = [replacement_dict[word] for word in sentence]
+        new_sentence = []
+        for word in sentence:
+            if word in replacement_dict.keys():
+                new_sentence.append(replacement_dict[word])
+            else:
+                new_sentence.append(word)
         new_sentences.append(new_sentence)
     return new_sentences
 
-def score_phrases(foreground_seqs, background_seqs, foreground_bigrams, min_count):
 
-    '''score_phrases: assigns a score to each bigram in the foreground sequences based on Mikilov et al., 2013
+def find_phrases(sentences, min_count=1, threshold=1.0, scoring="default"):
+    """Finds and returns a phrase model based on statistics from `sentences`.
 
-        Positional args:
-            foreground_seqs (list): a list of sequences from which significant phrases are extracted
-            background_seqs (list): a list opf sequences against which the foreground sequences are compared for discriminating phrases
-            foreground_bigrams (list): a list of precomputed bigrams in the foreground sequences
-            min_count (int): minimum number of times a phrase has to appear to be considered for significance
-    '''
+    Args:
+        sentences: list of list of strings, sentences in which to detect phrases.
+        min_count: int, minimum number of times a phrase has to appear to be included in phrase list
+        threshold: float, threshold for inclusion in phrases. Interpretation depends on scorer
+        scoring: str, one of two types of scoring methods, `default` or `npmi`
 
-    # Unique elements in foreground seqs
-    unique_foreground_els = get_unique_list_elements(foreground_seqs)
+    Returns:
+        Phrases: a gensim phrase model object containing information about phrases.
 
-    len_vocab = len(unique_foreground_els)
+    See Also:
+        gensim.models.phrases
+    """
+    return Phrases(sentences, min_count=min_count, threshold=threshold, scoring=scoring)
 
-    scored_bigrams = {}
-    for a in tqdm(unique_foreground_els):
-        for b in unique_foreground_els:
-            if a == b: continue
-            else:
-                count_a = background_seqs.count(a)
-                count_b = background_seqs.count(b)
 
-                bigram = f'{a}>{b}'
-                count_ab = foreground_bigrams.count(bigram)
-        # score = (#(ab in fg) - min) * len_vocab / #(a in bg)*#(b in bg)
-                score = original_scorer(count_a, count_b, count_ab, len_vocab, min_count,-1)
-                scored_bigrams[bigram] = score
+def save_phrase_datasets(sentences, labels, thresholds, save_dir, iterations=1, min_count=1, scoring="default"):
+    """Iteratively groups words into phrases and saves each iteration as a dataset.
 
-    return scored_bigrams
+    Args:
+        sentences: list of list of strings, sentences in which to detect phrases.
+        labels: list, labels to save with each clustered dataset
+        thresholds: list of floats, thresholds for inclusion in phrases per iteration. Interpretation depends on scorer
+        save_dir: str, where to save all of the phrased datasets.
+        iterations: int, number of passes of the phraser.
+        min_count: int, minimum number of times a phrase has to appear to be included in phrase list
+        scoring: str, one of two types of scoring methods, `default` or `npmi`
 
-def make_phrases(foreground_seqs, background_seqs, threshes, n, min_count):
+    """
+    print("Finding phrases.")
+    for i in tqdm(range(iterations)):
+        phrase_model = find_phrases(sentences, min_count=min_count, threshold=thresholds[i], scoring=scoring)
+        sentences = [phrase_model[sentence] for sentence in sentences]
 
-    '''make_phrases: makes a dictionary containing disciminating phrases for a given class
+        iter_dir = os.path.join(save_dir, f"phrase_iterations_{i + 1}")
+        ensure_dir(iter_dir)
 
-        Positional args:
-            foreground_seqs (list): a list of sequences from which significant phrases are extracted
-            background_seqs (list): a list opf sequences against which the foreground sequences are compared for discriminating phrases
-            threshes (list): a list of floating point thresholds which determine which n-gram phrases will be significant for each n
-            n (int): number of times to run the agglomeration algorithm. Running n times will potentially yield up to 2n-grams
-            min_count (int): minimum number of times a phrase has to appear to be considered for significance
-    '''
-
-    # Flatten list of sequences into one long sequence (introduces artifacts?)
-    flat_foreground_seqs = [el for seq in foreground_seqs for el in seq]
-    flat_background_seqs = [el for seq in background_seqs for el in seq]
-
-    all_phrases = {}
-
-    # Calculate 2*n grams
-
-    count = 0
-    num_syl = float(len(flat_foreground_seqs))
-    for m in range(n):
-
-        # All non-unique bigrams in background and foreground sequences
-        background_bigrams = [flat_background_seqs[i] + '>' + flat_background_seqs[i+1] for i in range(len(flat_background_seqs) - 1)]
-        foreground_bigrams = [flat_foreground_seqs[i] + '>' + flat_foreground_seqs[i+1] for i in range(len(flat_foreground_seqs) - 1)]
-
-        # Score bigrams in the foreground sequences
-        print(f'Scoring bigrams: {m}')
-        scored_bigrams = score_phrases(flat_foreground_seqs, flat_background_seqs, foreground_bigrams, min_count)
-
-        # Threshold detected bigrams and replace in both the background and foreground sequences
-        print('Thresholding...')
-        #TODO: WARNING: This process will potentially eliminate some neighboring ngrams
-        thresh = threshes[m]
-        for bigram, score in tqdm(scored_bigrams.items()):
-            ngram_len = len(bigram.split('>'))
-            if score > thresh:
-                all_phrases[bigram] = score
-                while bigram in foreground_bigrams:
-                    count += ngram_len
-                    ind = foreground_bigrams.index(bigram)
-                    del flat_foreground_seqs[ind]
-                    del flat_foreground_seqs[ind]
-                    del foreground_bigrams[ind]
-                    flat_foreground_seqs.insert(ind, bigram)
-                while bigram in background_bigrams:
-                    ind = background_bigrams.index(bigram)
-                    del flat_background_seqs[ind]
-                    del flat_background_seqs[ind]
-                    del background_bigrams[ind]
-                    flat_background_seqs.insert(ind, bigram)
-    prop = count / num_syl
-    return (all_phrases, prop)
-
-def make_phrases_dataset(sentences, labels, save_path, threshes, n, min_count):
-
-    '''make_phrases_dataset: makes a dictionary containing disciminating phrases for each class in a dataset
-
-        Positional args:
-            sentences (List of strs): list of sentences representing moseq emissions
-            labels (List of strs): list of class labels for each animal
-            save_path (str): path for saving pickled dictionary of phrases
-            threshes (list): a list of floating point thresholds which determine which n-gram phrases will be significant for each n
-            n (int): number of times to run the agglomeration algorithm. Running n times will potentially yield up to 2n-grams
-            min_count (int): minimum number of times a phrase has to appear to be considered for significance
-            '''
-    # Get labels names
-    unique_labels = get_unique_list_elements(labels)
-    num_classes = len(unique_labels)
-    all_group_phrases = {}
-
-    # For each group
-    for label in unique_labels:
-
-        # Compare label to other labels (including itself)
-        foreground_sents = [seq for s, seq in enumerate(sentences) if labels[s] == label]
-        background_sents = sentences
-        all_group_phrases[label] = make_phrases(foreground_sents, background_sents, threshes, n, min_count)
-
-    # Save
-    with open(save_path, 'wb') as handle:
-        print(f'Saving at {handle}')
-        pickle.dump(all_group_phrases, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-def ablate_phrases(sentences, labels, phrase_path, max_syllable=70):
-    with open(phrase_path, 'rb') as fn:
-        phrases = pickle.load(fn)
-
-    unique_labels = get_unique_list_elements(labels)
-
-    ablated_sentences = []
-    ablated_labels    = []
-
-    for label in unique_labels:
-        class_sentences = [sentence for (s, sentence) in enumerate(sentences) if labels[s] == label]
-        class_labels = [label] * len(class_sentences)
-        class_phrases = phrases[label][0]
-
-        ablated_labels += class_labels
-
-        num_ablated = 0
-        total_syl   = 0
-        # TODO: make sure you go from long to short phrases
-        for sentence in class_sentences:
-            total_syl += len(sentence)
-            for phrase_tuple in class_phrases:
-                phrase = phrase_tuple[0]
-                prop = phrase_tuple[1]
-                phrase_elements = phrase.split('>')
-                k = len(phrase_elements)
-                for i in range(len(sentence) - k):
-                    candidate_phrase = sentence[i:i+k]
-                    if candidate_phrase == phrase_elements:
-                        num_ablated += k
-                        random_phrase = list(np.random.randint(0, max_syllable, k))
-                        sentence[i:i+k] = random_phrase
-            ablated_sentences.append(sentence)
-        print('%.3f perc. of syllables ablated.' % (100 * (float(num_ablated) / total_syl)) )
-    return ablated_sentences, ablated_labels
-
+        phrase_path = os.path.join(iter_dir, "sentences.pkl")
+        label_path = os.path.join(iter_dir, "labels.pkl")
+        for nm, dt in zip([phrase_path, label_path], [sentences, labels]):
+            with open(nm, "wb") as fn:
+                pickle.dump(dt, fn, protocol=pickle.HIGHEST_PROTOCOL)
