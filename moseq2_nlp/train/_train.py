@@ -24,7 +24,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-Representation = Literal["embeddings", "usages", "transitions"]
+Representation = Literal["embeddings", "usages", "transitions", "transitions_pca"]
 Classifier = Literal["logistic_regression", "svm"]
 Penalty = Literal["l1", "l2", "elasticnet"]
 
@@ -123,9 +123,10 @@ def train(
 
     elif representation == "usages":
         features = get_usage_representation(sentences, num_syllables)
-
     elif representation == "transitions":
         features = get_transition_representation(sentences, num_transitions, max_syllable=num_syllables)
+    elif representation == "transitions_pca":
+        features = get_transition_representation(sentences, num_transitions, max_syllable=num_syllables, truncation_type='pca')
     else:
         raise ValueError('Representation type not recognized. Valid values are "usages", "transitions" and "embeddings".')
 
@@ -214,7 +215,7 @@ def train_regressor(
         "cv": kf,
         "random_state": seed,
         "dual": False,
-        "solver": "lbfgs",
+        "solver": "liblinear",
         "class_weight": "balanced",
         "multi_class": multi_class,
         "refit": True,

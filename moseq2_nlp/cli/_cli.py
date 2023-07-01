@@ -10,7 +10,7 @@ from numpy.random import choice, randint
 from tqdm import tqdm
 
 import moseq2_nlp.train as trainer
-from moseq2_nlp.data import save_phrase_datasets, save_brown_datasets, get_emissions
+from moseq2_nlp.data import save_phrase_datasets, save_brown_datasets, get_emissions, get_raw
 from moseq2_nlp.explain import Explainer
 
 from moseq2_nlp.gridsearch import (
@@ -25,6 +25,7 @@ from moseq2_nlp.util import IntChoice, command_with_config, ensure_dir, get_comm
 from moseq2_viz.util import parse_index
 from moseq2_viz.model.util import parse_model_results
 from moseq2_nlp.visualize import plot_latent, animate_latent_path
+from moseq2_nlp.visualize import visualize_gridsearch
 
 # Here we will monkey-patch click Option __init__
 # in order to force showing default values for all options
@@ -133,6 +134,13 @@ def train(
         config_file: str, path for config variables.
 
     """
+    train_params = locals()
+    # Store training parameters for later
+    exp_dir = os.path.join(save_dir, name)
+    ensure_dir(exp_dir)
+    write_yaml(os.path.join(exp_dir, 'train_params.yaml'), train_params)
+    
+    # Train
     trainer.train(
         name,
         save_dir,
@@ -160,6 +168,7 @@ def train(
         split_seed,
         verbose,
     )
+    print('TRAINING FINISHED')
 
 
 @cli.command(name="generate-train-config", help="Generates a configuration file that holds editable options for training parameters.")
@@ -277,7 +286,6 @@ def grid_search(
 
     """
     worker_dicts = generate_grid_search_worker_params(scan_file)
-
     if cluster_type == "local":
         cluster_wrap = wrap_command_with_local
     elif cluster_type == "slurm":
@@ -318,8 +326,7 @@ def generate_gridsearch_config(output_file):
 
 @cli.command(name="aggregate-gridsearch-results", help="Aggregate Gridsearch results.")
 @click.argument("results-directory", type=click.Path(exists=True))
-@click.option("--best-key", type=str, default="best_accuracy")
-def aggregate_gridsearch_results(results_directory, best_key):
+def aggregate_gridsearch_results(results_directory):
     """Aggregate gridsearch results.
 
     Args:
@@ -327,19 +334,28 @@ def aggregate_gridsearch_results(results_directory, best_key):
         best_key: str, how to sort results.
 
     """
-    results = find_gridsearch_results(results_directory).sort_values(best_key, ascending=False)
-    results.to_csv(os.path.join(results_directory, "gridsearch-aggregate-results.tsv"), sep="\t", index=False)
+    results = find_gridsearch_results(results_directory).sort_values('train_f1-score', ascending=False)
+    results.to_csv(os.path.join(results_directory, "gridsearch-aggregate-results.csv"), sep="\t", index=False)
 
     print("Best model:")
-    print(results.iloc[0])
+    print(results.iloc[0]['name'])
+    print("Train f1")
+    print(results.iloc[0]['train_f1-score'])
+    print("Test f1")
+    print(results.iloc[0]['test_f1-score'])
 
+@cli.command(name="visualize-gridsearch-results", help="Visualize gridsearch results")
+@click.argument("exp_dir", type=click.Path(exists=True))
+def visualize_gridsearch_results(exp_dir):
+    visualize_gridsearch(exp_dir)
 
 @cli.command(name="moseq-to-raw", help="convert model and index file to raw sentences and labels")
 @click.argument("model-file", type=click.Path(exists=True))
 @click.argument("index-file", type=click.Path(exists=True))
 @click.option("--data-dir", type=str, default=".")
 @click.option("--custom-groupings", type=str, multiple=True, default=[])
-def moseq_to_raw(model_file, index_file, data_dir):
+@click.option("--excluded-labels", type=str, multiple=True, default=[])
+def moseq_to_raw(model_file, index_file, data_dir, custom_groupings, excluded_labels):
     """Convert model file and index file to sentences and labels.
 
     Args:
@@ -347,11 +363,16 @@ def moseq_to_raw(model_file, index_file, data_dir):
         index_file: yaml file from moseq
         data_dir: str, where to save sentences, labels
         custom_groupings: list of str, each str is a comma separated sequence of labels to be grouped into one class
+        excluded_labels: list of str, each str is a label to exclude from the analysis.
 
     """
     ensure_dir(data_dir)
 
-    sentences, labels = get_raw(model_file, index_file, custom_groupings)
+    raw_sentences, raw_labels = get_raw(index_file, model_file, custom_groupings)
+    
+    sentences = [sentence for (i, sentence) in enumerate(sentences) if labels[i] not in excluded_labels]
+    labels = [label for label in labels if label not in excluded_labels]
+
     unique_labels = get_unique_list_elements(labels)
 
     for dat, fn in zip([sentences, labels], ["sentences", "labels"]):
@@ -415,7 +436,6 @@ def animate_latent_cmd(features_path, model_file, index_file, method, save_path,
     sentence = sentence[animal_index]
 
     animate_latent_path(X, sentence, method, save_path, perplexity=perplexity)
-
 
 @cli.command(name="explain-classifier", help="explains the results of a classifier")
 @click.argument("data-path", type=click.Path(exists=True))

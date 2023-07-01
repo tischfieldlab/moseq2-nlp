@@ -13,6 +13,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from moseq2_nlp.util import get_unique_list_elements
 import umap
+import pandas as pd
 
 
 def dim_red(X, method, **kwargs):
@@ -137,3 +138,53 @@ def animate_latent_path(X, sentence, method, save_path, **kwargs):
 
     writergif = animation.PillowWriter(fps=1)
     ani.save(save_path, writer=writergif)
+
+def visualize_gridsearch(exp_dir):
+    sub_exp_dirs = os.listdir(exp_dir)
+    sub_exp_dirs = [dr for dr in sub_exp_dirs if 'pdf' not in dr]
+    sub_exp_names = [dr.split('/')[0] for dr in sub_exp_dirs]
+    num_exps = len(sub_exp_dirs)
+    
+    fig, ax = plt.subplots()
+    
+    for d, dr in enumerate(sub_exp_dirs):
+    
+        csv_fn = os.path.join(exp_dir, dr, 'gridsearch-aggregate-results.csv')
+    
+        results = pd.read_csv(csv_fn, sep="\t")
+    
+        names = results.loc[:, 'name'].tolist()
+        train_f1 = results.loc[:,'train_f1-score'].to_numpy()
+        test_f1  = results.loc[:,'test_f1-score'].to_numpy()
+    
+        inds = np.argsort(train_f1)
+        sorted_train_f1 = train_f1[inds]
+        sorted_test_f1  = test_f1[inds]
+        sorted_names    = [names[ind] for ind in inds]
+    
+        disps  = [-.25, 0, .25]
+        colors = ['r', 'b', 'g']
+        for r, representation in enumerate(['usages', 'transitions', 'embeddings']):
+            rep_sorted_train_f1 = [f1 for i, f1 in enumerate(sorted_train_f1) if representation in sorted_names[i]]
+            rep_sorted_test_f1 = [f1 for i, f1 in enumerate(sorted_test_f1) if representation in sorted_names[i]]
+    
+            max_train_f1 = max(rep_sorted_train_f1)
+            # Get ties
+            max_inds = [i for i, f1 in enumerate(rep_sorted_train_f1) if f1 == max_train_f1]
+            all_max_tests = [rep_sorted_test_f1[ind] for ind in max_inds]
+    
+            mean = np.mean(all_max_tests)
+            std  = np.std(all_max_tests)
+    
+            x = (d - .5) + disps[r]
+            ax.bar(x, mean, color=colors[r], width=.25)
+            ax.errorbar(x, mean, yerr=std, ecolor='black', capsize=6)
+    
+    from matplotlib.lines import Line2D
+    custom_lines = [Line2D([0], [0], color='red', lw=4),
+                    Line2D([0], [0], color='blue', lw=4),
+                    Line2D([0], [0], color='green', lw=4)]
+    ax.legend(custom_lines, ['Usages', 'Transitions', 'Embeddings'])
+    ax.set_ylabel('Best testing f1')
+    ax.set_xticks(np.arange(num_exps)-.5, labels=sub_exp_names)
+    plt.savefig(os.path.join(exp_dir, 'bars.pdf'))

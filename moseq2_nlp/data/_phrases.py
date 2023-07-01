@@ -95,7 +95,13 @@ def save_brown_datasets(sentences, labels, save_dir, alpha=0.5, min_count=0):
             break
         else:
             current_clusters = num_clusters
-            new_sentences = replace_words(sentences, res_clusters)
+            unique_clusters = list(set([v for v in res_clusters.values()]))
+
+            cluster_dict = {unique_cluster : [syl for (syl, cluster) in res_clusters.items() if cluster == unique_cluster] for unique_cluster in unique_clusters}
+            replacement_dict = {key: min(cluster_dict[val]) for (key,val) in res_clusters.items()}
+            #replacement_tuples = [(min(cluster_dict[cluster]),cluster) for (syl, cluster) in res_clusters.items()]
+
+            new_sentences = replace_words(sentences, replacement_dict)
 
             # Make dir
             res_dir = os.path.join(save_dir, f"data_resolution_{resolution}")
@@ -103,8 +109,8 @@ def save_brown_datasets(sentences, labels, save_dir, alpha=0.5, min_count=0):
 
             # Save
             names = ["sentences", "labels", "cluster_map"]
-            res_clusters = [(k, v) for (k, v) in res_clusters.items()]
-            for obj, nm in zip([new_sentences, labels, res_clusters], names):
+            #res_clusters = [(k, v) for (k, v) in res_clusters.items()]
+            for obj, nm in zip([new_sentences, labels, replacement_dict], names):
                 res_path = os.path.join(res_dir, f"{nm}.pkl")
                 with open(res_path, "wb") as handle:
                     pickle.dump(obj, handle, protocol=pickle.HIGHEST_PROTOCOL)

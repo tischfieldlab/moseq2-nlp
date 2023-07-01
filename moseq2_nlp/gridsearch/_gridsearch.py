@@ -10,6 +10,7 @@ import pandas as pd
 
 from moseq2_nlp.util import ensure_dir, read_yaml, write_yaml
 import matplotlib.pyplot as plt
+from sklearn.linear_model import Lasso, LinearRegression, LogisticRegression
 import pdb
 
 
@@ -156,7 +157,9 @@ def generate_grid_search_worker_params(scan_file: str) -> List[dict]:
 
             # rename the job, based on the specific params
             name_suffix = "_".join([f"{k}-{v}" for k, v in scan_params.items()])
-            final_params["name"] = f"{final_params['name']}_{name_suffix}"
+            final_name = f"{final_params['name']}_{name_suffix}"
+            final_name = final_name.replace('/',"_")
+            final_params["name"] = final_name
 
             worker_dicts.append(final_params)
 
@@ -203,6 +206,38 @@ def get_gridsearch_default_scans() -> List:
         },
     ]
 
+def parse_exp_name(path: str) -> dict:
+    """Parse exp yaml into parameters
+
+    Args:
+        path (str): yaml path
+    """
+    exp_dict = {}
+    path_copy = path
+
+    #base_name
+    rep_idx = path_copy.index('representation')
+    base_name = path_copy[0:rep_index]
+    path_copy = path_copy[rep_index:]
+
+    #rep_name
+    rep_end = path_copy.find('_')
+    rep_start = path_copy[15]
+    rep_name = path_copy[rep_start:rep_end]
+    path_copy = path_copy[rep_end:]
+
+    #preprocessing_name
+    emission_start = path_copy.find('emissions')
+    preprocessing_name = path_copy[:emission_start]
+    path_copy = path_copy[emission_start:]
+
+    #emissions
+    emissions_end = path_copy.find('_')
+    emissions_start = path_copy.find('-') + 1
+    emissions = path_copy[emissions_start:emissions_end]
+    path_copy = path_copy[emissions_end:]
+
+    return NotImplemented
 
 def find_gridsearch_results(path: str) -> pd.DataFrame:
     """Find and aggregate grid search results.
@@ -210,7 +245,7 @@ def find_gridsearch_results(path: str) -> pd.DataFrame:
     Args:
         path (str): path to search for experiments
     """
-    experiments = glob.glob(os.path.join(path, "*", "experiment_info.yaml"))
+    experiments = glob.glob(os.path.join(path, "*", "results.yaml"))
 
     exp_data = []
     for exp in experiments:
@@ -219,7 +254,10 @@ def find_gridsearch_results(path: str) -> pd.DataFrame:
 
         # tag each dict with the model ID
         time_data = {f"time_{k}": v for (k, v) in data["compute_times"].items()}
-        exp_data.append({"id": id, **data["parameters"], **time_data, **data["model_performance"]})
+        train_results = {f'train_{key}': val for (key,val) in data['model_performance_train']['classification_report']['weighted avg'].items()}
+        test_results = {f'test_{key}': val for (key,val) in data['model_performance_test']['classification_report']['weighted avg'].items()}
+
+        exp_data.append({'name': exp, **time_data, **train_results, **test_results})
 
     return pd.DataFrame(exp_data)
 
@@ -240,7 +278,7 @@ def observe_gs_variation(path: str, representation_name: str, dep_var_name: str,
 
     Args:
         path: str, where gridsearch results are saved in the form of a pandas dataframe
-        representation_name: str indicating which features among usages, transitions and embeddings were used
+        : str indicating which features among usages, transitions and embeddings were used
         dep_var_name: str, first variable name, plotted on y axis
         ind_var_name: str, second variable name, plotted on x axis
     """
@@ -256,3 +294,79 @@ def observe_gs_variation(path: str, representation_name: str, dep_var_name: str,
     ax.set_ylabel(dep_var_name)
     plt.show()
     plt.close()
+
+def train_params_to_features(train_params):
+
+    feature_dims = ['data_path','dm', 'embedding_dim', 'embedding_epochs', 'embedding_window', 'emissions', 'num_syllables', 'num_transitions', 'representation']
+
+    feature_vector = []
+
+    for dim in feature_dims:
+        feature = train_params[dim]
+        
+        if dim == 'data_path':
+            splt = feature.split('_')
+            res_plus = splt[-1]
+            res = res_plus.split('.')[0]
+            num_feature = int(res)
+        elif dim == 'emissions':
+            num_feature = 1 * feature
+        elif dim == 'embedding_dim':
+            num_feature = np.log2(feature)
+        elif dim == 'representation':
+            if feature == 'usages':
+                num_feature = 0
+            elif feature == 'transitions':
+                num_feature = 1
+            else:
+                num_feature = 2
+        else: 
+            num_feature = feature
+        feature_vector.append(num_feature)
+
+    return np.array(feature_vector), feature_dims
+
+def get_gridsearch_xy(results_yaml, params_yaml, dep_var='test_f1'):
+    if dep_var == 'test_f1':
+        y = results_yaml['model_performance_test']['classification_report']['weighted avg']['f1-score']
+    elif dep_var == 'train_f1':
+        y = results_yaml['model_performance_train']['classification_report']['weighted avg']['f1-score']
+    elif dep_var == 'classifier_time':
+        y = results_yaml['Compute_times']['Classifier']
+    elif dep_var == 'features_time':
+        y = results_yaml['Compute_times']['Features']
+    elif dep_var == 'data_time':
+        y = results_yaml['Compute_times']['Data']
+    else:
+        raise ValueError('Dependent variable not recognized!')
+    x, _ = train_params_to_features(params_yaml)
+
+    return x, y
+
+def gridsearch_regressor(results_dir, dep_var='test_f1'):
+    
+    all_results = glob.glob(os.path.join(results_dir, "*", "results.yaml"))
+    all_params = glob.glob(os.path.join(results_dir, "*", "train_params.yaml"))
+
+    _, param_names = train_params_to_features(read_yaml(all_params[0]))
+
+    X = []
+    Y = []
+    for results, params in zip(all_results, all_params):
+        results_yaml = read_yaml(results)
+        params_yaml = read_yaml(params)
+        x, y = get_gridsearch_xy(results_yaml, params_yaml, dep_var=dep_var)
+        X.append(x)
+        Y.append(y)
+    X = np.array(X)
+    X = (X/X.max(0))
+    Y = np.array(Y)
+
+    #clf = Lasso(alpha=1e-4)
+    clf = LinearRegression()
+    print('Training linear regressor')
+    clf.fit(X,Y)
+
+    coeff_dict = {param:coeff for param, coeff in zip(param_names, clf.coef_)}
+    print(f'r2 = {clf.score(X,Y)}')
+    print(coeff_dict)

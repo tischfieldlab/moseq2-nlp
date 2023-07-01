@@ -81,7 +81,7 @@ def get_usage_representation(sentences: List[List[str]], max_syllable: int, bad_
     return np.array(U)
 
 
-def get_transition_representation(sentences: List[List[str]], num_transitions: int, max_syllable: int, bad_syllables: List[int] = [-5]):
+def get_transition_representation(sentences: List[List[str]], num_transitions: int, max_syllable: int, bad_syllables: List[int] = [-5], truncation_type: str = 'mean'):
     """Compute transition (normalized bigram) representations.
 
     Args:
@@ -89,6 +89,8 @@ def get_transition_representation(sentences: List[List[str]], num_transitions: i
         num_transitions: an int indicating the number of transitions to include. If < 0, then num_transitions is set to that value after which transition probs are zero for all animals
         max_syllable: an int indicating the maximum value of syllables to be counted
         bad_syllables: a list, defaulting to [-5], indicating syllables to be excluded from the count.
+        truncation_type: str: if "simple", then just truncates the array to have the right number of elements. If "pca", then runs pca on the full transition matrix with a dimensionality specified by `num_transitions`.
+
 
     Returns:
         T: The transition representation of all animals in the form of an animal x num_transitoin np.float32 array; i.e. truncated and flattened transition matrix,
@@ -106,14 +108,12 @@ def get_transition_representation(sentences: List[List[str]], num_transitions: i
     # Truncated transitions
 
     tm_vals_array = np.array(tm_vals)
-    sorted_inds = np.argsort(tm_vals_array.mean(0))
-    sorted_tm_vals = tm_vals_array[:, sorted_inds]
-    if num_transitions < 0:
-        tm_sums = list(sorted_tm_vals.sum(0))
-        first_zero = max_syllable - next((i for i, x in enumerate(tm_sums) if x), len(tm_sums))
-        T = sorted_tm_vals[:, :first_zero]
-    else:
-        T = sorted_tm_vals[:, -1 * num_transitions :]
+
+    if truncation_type == 'mean':
+        sorted_inds = np.argsort(tm_vals_array.mean(0))[-num_transitions:] # sorted low to high
+    else: 
+        sorted_inds = np.argsort(tm_vals_array.std(0))[-num_transitions:] # sorted low to high
+    T = tm_vals_array[:, sorted_inds]
     return T
 
 
