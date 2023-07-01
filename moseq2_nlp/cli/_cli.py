@@ -58,6 +58,7 @@ def cli():
 @click.option("--emissions", is_flag=True)
 @click.option("--num-syllables", type=int, default=70)
 @click.option("--num-transitions", type=int, default=300)
+@click.option("--transition-type", type=click.Choice(["mean", "std"]), default="mean")
 @click.option("--min-count", type=int, default=1)
 @click.option("--negative", type=int, default=5)
 @click.option("--dm", default=2, type=IntChoice([0, 1, 2]))
@@ -85,6 +86,7 @@ def train(
     emissions,
     num_syllables,
     num_transitions,
+    transition_type,
     min_count,
     negative,
     dm,
@@ -150,6 +152,7 @@ def train(
         emissions,
         num_syllables,
         num_transitions,
+        transition_type,
         min_count,
         negative,
         dm,

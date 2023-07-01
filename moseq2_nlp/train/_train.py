@@ -38,6 +38,7 @@ def train(
     emissions: bool,
     num_syllables: int,
     num_transitions: int,
+    transition_type:str,
     min_count: int,
     negative: int,
     dm: Literal[0, 1, 2],
@@ -124,7 +125,7 @@ def train(
     elif representation == "usages":
         features = get_usage_representation(sentences, num_syllables)
     elif representation == "transitions":
-        features = get_transition_representation(sentences, num_transitions, max_syllable=num_syllables)
+        features = get_transition_representation(sentences, num_transitions, max_syllable=num_syllables, transition_type=transition_type)
     elif representation == "transitions_pca":
         features = get_transition_representation(sentences, num_transitions, max_syllable=num_syllables, truncation_type='pca')
     else:
