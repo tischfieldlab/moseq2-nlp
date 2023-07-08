@@ -21,6 +21,7 @@ from moseq2_nlp.gridsearch import (
     wrap_command_with_slurm,
     write_jobs,
 )
+from moseq2_nlp.gridsearch import monitor_gridsearch as mg
 from moseq2_nlp.util import IntChoice, command_with_config, ensure_dir, get_command_defaults, write_yaml, get_unique_list_elements
 from moseq2_viz.util import parse_index
 from moseq2_viz.model.util import parse_model_results
@@ -409,6 +410,12 @@ def plot_latent_cmd(features_path, labels_path, method, save_path, perplexity):
 
     plot_latent(X, labels, method, save_path, perplexity=perplexity)
 
+@cli.command(name="monitor-gridsearch", help="find cancelled jobs and write a script for restarting the if desired")
+@click.argument("jobs-script", type=click.Path(exists=True))
+@click.option("--write-restart-jobs", is_flag=True)
+@click.option("--restart-dir", type=click.Path(exists=True), default='.')
+def monitor_gridsearch(jobs_script, write_restart_jobs, restart_dir):
+    mg(jobs_script, write_restart_jobs=write_restart_jobs, restart_dir=restart_dir)
 
 @cli.command(name="animate-latent", help="animate path of unclassified data (e.g. syllables)")
 @click.argument("features-path", type=click.Path(exists=True))

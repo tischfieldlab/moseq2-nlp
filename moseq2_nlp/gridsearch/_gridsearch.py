@@ -370,3 +370,39 @@ def gridsearch_regressor(results_dir, dep_var='test_f1'):
     coeff_dict = {param:coeff for param, coeff in zip(param_names, clf.coef_)}
     print(f'r2 = {clf.score(X,Y)}')
     print(coeff_dict)
+
+def monitor_gridsearch(jobs_script, write_restart_jobs=False, restart_dir='.'):
+    
+    restart_inconclusive_jobs = True
+    cancelled_jobs = []
+    good_jobs    = []
+    inconclusive_jobs = []
+    # open jobs script
+    with open(jobs_script,'r') as fn:
+        for line in fn:
+            split1 = line.split('output')[1]
+            log_file = split1.split('wrap')[0][2:-4]
+            log_dir  = log_file.split('.log')[0]
+            if os.path.exists(os.path.join(log_dir, 'results.yaml')):
+                good_jobs.append(line)
+            else:
+                with open(log_file,'r') as lf:
+                    content = lf.read()
+                    if "CANCELLED" in content:
+                        cancelled_jobs.append(line)
+                    else:
+                        inconclusive_jobs.append(line)
+    
+    if restart_inconclusive_jobs:
+        restart_jobs = cancelled_jobs + inconclusive_jobs
+    else:
+        restart_jobs = cancelled_jobs
+    print(f'{len(good_jobs)} were good.')
+    print(f'{len(cancelled_jobs)} were cancelled.')
+    print(f'{len(inconclusive_jobs)} were inconclusive.')
+
+    if write_restart_jobs:
+        print(f'Rewriting {len(restart_jobs)} jobs.')
+        with open('restart_jobs.sh', 'w') as rj:
+            for line in restart_jobs:
+                rj.write(line)
